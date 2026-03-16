@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RIZOMA | Infraestrutura de Confiança para Entregas</title>
+    <meta name="description" content="Conectando empreendedores a entregadores verificados com segurança e transparência">
+    
+    <!-- Fontes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Sistema de Design - Minimalista e Profissional */
+        :root {
+            /* Cores Primárias - Neutras e Confiáveis */
+            --primary-50: #f8fafc;
+            --primary-100: #f1f5f9;
+            --primary-200: #e2e8f0;
+            --primary-300: #cbd5e1;
+            --primary-400: #94a3b8;
+            --primary-500: #64748b;
+            --primary-600: #475569;
+            --primary-700: #334155;
+            --primary-800: #1e293b;
+            --primary-900: #0f172a;
+            
+            /* Cores de Status - Claras e Funcionais */
+            --success: #059669;
+            --success-bg: #d1fae5;
+            --warning: #d97706;
+            --warning-bg: #fef3c7;
+            --danger: #dc2626;
+            --danger-bg: #fee2e2;
+            --info: #2563eb;
+            --info-bg: #dbeafe;
+            
+            /* Cores Neutras */
+            --white: #ffffff;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --black: #000000;
+            
+            /* Tipografia */
+            --font-base: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            
+            /* Espaçamentos */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-10: 2.5rem;
+            --space-12: 3rem;
+            --space-16: 4rem;
+            
+            /* Bordas */
+            --radius-sm: 0.25rem;
+            --radius-md: 0.375rem;
+            --radius-lg: 0.5rem;
+            --radius-xl: 0.75rem;
+            --radius-full: 9999px;
+            
+            /* Sombras */
+            --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            
+            /* Transições */
+            --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-base);
+            color: var(--gray-900);
+            background-color: var(--white);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            color: var(--gray-900);
+            line-height: 1.25;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        button {
+            cursor: pointer;
+            font-family: inherit;
+            border: none;
+            background: none;
+        }
+        
+        /* Layout */
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 var(--space-6);
+        }
+        
+        /* Header Minimalista */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background-color: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            height: 64px;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 100%;
+            padding: 0 var(--space-6);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--gray-900);
+        }
+        
+        .logo-icon {
+            color: var(--success);
+        }
+        
+        /* Indicador de Papel */
+        .role-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            background-color: var(--gray-100);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+        
+        .role-badge {
+            padding: var(--space-1) var(--space-2);
+            background-color: var(--info-bg);
+            color: var(--info);
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        /* Botões */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            font-size: 0.9375rem;
+            transition: all var(--transition-fast);
+            gap: var(--space-2);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-800);
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-900);
+        }
+        
+        .btn-outline {
+            border: 1px solid var(--gray-300);
+            color: var(--gray-700);
+            background-color: transparent;
+        }
+        
+        .btn-outline:hover {
+            background-color: var(--gray-100);
+            border-color: var(--gray-400);
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: var(--white);
+        }
+        
+        .btn-success:hover {
+            background-color: #047857;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--white);
+        }
+        
+        .btn-warning:hover {
+            background-color: #b45309;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Cards - Minimalistas */
+        .card {
+            background-color: var(--white);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            padding: var(--space-4) var(--space-6);
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .card-body {
+            padding: var(--space-6);
+        }
+        
+        /* Sidebar Fina */
+        .sidebar {
+            width: 200px;
+            background-color: var(--white);
+            border-right: 1px solid var(--gray-200);
+            height: calc(100vh - 64px);
+            position: fixed;
+            left: 0;
+            top: 64px;
+            padding: var(--space-4) 0;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: var(--space-3) var(--space-4);
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all var(--transition-fast);
+        }
+        
+        .nav-item:hover {
+            background-color: var(--gray-100);
+            color: var(--gray-900);
+        }
+        
+        .nav-item.active {
+            background-color: var(--gray-100);
+            color: var(--gray-900);
+            font-weight: 600;
+        }
+        
+        .nav-icon {
+            width: 16px;
+            margin-right: var(--space-3);
+            text-align: center;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: 200px;
+            padding: var(--space-6);
+            min-height: calc(100vh - 64px);
+            background-color: var(--gray-50);
+        }
+        
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 600;
+            gap: var(--space-1);
+        }
+        
+        .status-success {
+            background-color: var(--success-bg);
+            color: var(--success);
+        }
+        
+        .status-warning {
+            background-color: var(--warning-bg);
+            color: var(--warning);
+        }
+        
+        .status-danger {
+            background-color: var(--danger-bg);
+            color: var(--danger);
+        }
+        
+        .status-info {
+            background-color: var(--info-bg);
+            color: var(--info);
+        }
+        
+        /* Score de Confiabilidade */
+        .trust-score {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--space-1) var(--space-3);
+            background-color: var(--success-bg);
+            color: var(--success);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .trust-score.warning {
+            background-color: var(--warning-bg);
+            color: var(--warning);
+        }
+        
+        .trust-score.danger {
+            background-color: var(--danger-bg);
+            color: var(--danger);
+        }
+        
+        /* Checkpoints de Entrega */
+        .checkpoint-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+            padding: var(--space-4) 0;
+        }
+        
+        .checkpoint {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-3);
+        }
+        
+        .checkpoint-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--gray-200);
+            color: var(--gray-600);
+            flex-shrink: 0;
+        }
+        
+        .checkpoint.completed .checkpoint-icon {
+            background-color: var(--success-bg);
+            color: var(--success);
+        }
+        
+        .checkpoint.active .checkpoint-icon {
+            background-color: var(--info-bg);
+            color: var(--info);
+        }
+        
+        .checkpoint-content {
+            flex: 1;
+        }
+        
+        /* Segurança Visível */
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--space-2) var(--space-3);
+            background-color: var(--success-bg);
+            color: var(--success);
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            font-weight: 600;
+            gap: var(--space-2);
+        }
+        
+        /* Lista de Entregadores */
+        .deliveryman-card {
+            padding: var(--space-4);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            background-color: var(--white);
+        }
+        
+        .deliveryman-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-3);
+        }
+        
+        .deliveryman-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+        
+        .deliveryman-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-full);
+            background-color: var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+        
+        .deliveryman-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-3);
+            margin-top: var(--space-3);
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: var(--space-2);
+            background-color: var(--gray-50);
+            border-radius: var(--radius-md);
+        }
+        
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
+        
+        /* Formulários */
+        .form-group {
+            margin-bottom: var(--space-4);
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: var(--space-2);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: var(--space-3) var(--space-4);
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-md);
+            font-size: 0.9375rem;
+            transition: all var(--transition-fast);
+            background-color: var(--white);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-600);
+            box-shadow: 0 0 0 3px var(--primary-100);
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        
+        .modal-content {
+            background: var(--white);
+            padding: var(--space-8);
+            border-radius: var(--radius-xl);
+            max-width: 440px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-md);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .plan-card {
+            border: 2px solid transparent;
+            transition: all var(--transition-normal);
+            cursor: pointer;
+        }
+        
+        .plan-card:hover {
+            border-color: var(--primary-300);
+            transform: translateY(-2px);
+        }
+        
+        .plan-card.selected {
+            border-color: var(--success);
+            background-color: var(--success-bg);
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 64px;
+            }
+            
+            .sidebar .nav-text {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 64px;
+            }
+            
+            .deliveryman-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                padding: var(--space-4);
+            }
+        }
+        
+        /* Utilitários */
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-muted {
+            color: var(--gray-500);
+        }
+        
+        .mb-2 { margin-bottom: var(--space-2); }
+        .mb-3 { margin-bottom: var(--space-3); }
+        .mb-4 { margin-bottom: var(--space-4); }
+        .mb-6 { margin-bottom: var(--space-6); }
+        .mt-4 { margin-top: var(--space-4); }
+        .mt-6 { margin-top: var(--space-6); }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .flex-col {
+            flex-direction: column;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .justify-between {
+            justify-content: space-between;
+        }
+        
+        .gap-2 { gap: var(--space-2); }
+        .gap-3 { gap: var(--space-3); }
+        .gap-4 { gap: var(--space-4); }
+        .gap-6 { gap: var(--space-6); }
+        
+        .w-full {
+            width: 100%;
+        }
+        
+        /* Estados bloqueados */
+        .disabled-overlay {
+            position: relative;
+        }
+        
+        .disabled-overlay::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-600);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        .requires-plan::after {
+            content: 'Plano necessário';
+        }
+        
+        .demo-badge {
+            display: inline-block;
+            padding: var(--space-1) var(--space-2);
+            background-color: var(--gray-200);
+            color: var(--gray-600);
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-leaf logo-icon"></i>
+                    <span>RIZOMA</span>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div class="role-indicator" id="role-indicator" style="display: none;">
+                        <span>Você está aqui como:</span>
+                        <span class="role-badge" id="current-role">Empreendedor</span>
+                    </div>
+                    
+                    <div class="role-indicator" id="plan-indicator" style="display: none;">
+                        <span>Plano:</span>
+                        <span class="role-badge" id="current-plan" style="background-color: var(--warning-bg); color: var(--warning);">
+                            Nenhum
+                        </span>
+                    </div>
+                    
+                    <button class="btn btn-outline" onclick="logout()" style="display: none;" id="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Modal de Login/Cadastro -->
+    <div id="auth-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="text-center mb-6">
+                <div class="logo" style="justify-content: center; font-size: 1.5rem; margin-bottom: var(--space-2);">
+                    <i class="fas fa-leaf logo-icon"></i>
+                    <span>RIZOMA</span>
+                </div>
+                <p class="text-muted">Infraestrutura de confiança para entregas</p>
+            </div>
+            
+            <h2 class="text-center mb-4">Acessar Plataforma</h2>
+            <p class="text-center text-muted mb-6">
+                Teste o protótipo completo com autenticação simulada
+            </p>
+            
+            <div class="mb-4">
+                <label class="form-label">Email</label>
+                <input type="email" id="auth-email" class="form-control" placeholder="seu@email.com" value="teste@rizoma.com">
+            </div>
+            
+            <div class="mb-6">
+                <label class="form-label">Senha</label>
+                <input type="password" id="auth-password" class="form-control" placeholder="••••••••" value="123456">
+            </div>
+            
+            <div class="flex flex-col gap-3">
+                <button onclick="simulateLogin()" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Entrar (Simulação)
+                </button>
+                
+                <button onclick="simulateRegister()" class="btn btn-outline">
+                    <i class="fas fa-user-plus"></i>
+                    Cadastrar (Simulação)
+                </button>
+            </div>
+            
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <p class="text-muted text-center text-sm">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Modo demonstração:</strong> Login não valida credenciais reais.
+                    Use qualquer email/senha para testar.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Página de Seleção de Papel -->
+    <div id="role-selection-page" style="display: none;">
+        <main class="container">
+            <div style="max-width: 600px; margin: var(--space-16) auto;">
+                <div class="text-center mb-8">
+                    <h1 style="font-size: 2.5rem; margin-bottom: var(--space-2);">RIZOMA</h1>
+                    <p style="font-size: 1.25rem; color: var(--gray-600); margin-bottom: var(--space-6);">
+                        Infraestrutura de confiança entre quem precisa entregar e quem executa a entrega.
+                    </p>
+                    
+                    <div class="security-badge mb-6">
+                        <i class="fas fa-user-check"></i>
+                        Conectado como: <span id="user-name-display"></span>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="text-center mb-2">Como você usa a RIZOMA?</h2>
+                        <p class="text-center text-muted mb-6">
+                            Selecione seu papel para acessar as ferramentas certas
+                        </p>
+                        
+                        <div class="flex flex-col gap-4">
+                            <!-- Empreendedor -->
+                            <div class="card plan-card" onclick="selectRole('entrepreneur')">
+                                <div class="card-body">
+                                    <div class="flex items-center gap-4">
+                                        <div style="width: 48px; height: 48px; border-radius: var(--radius-full); background-color: var(--info-bg); display: flex; align-items: center; justify-content: center;">
+                                            <i class="fas fa-building" style="color: var(--info); font-size: 1.5rem;"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="mb-1">Empreendedor</h3>
+                                            <p class="text-muted text-sm">
+                                                Você tem produtos para entregar e precisa de segurança
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 flex gap-3 flex-wrap">
+                                        <span class="security-badge">
+                                            <i class="fas fa-shield-alt"></i>
+                                            Entregadores verificados
+                                        </span>
+                                        <span class="security-badge">
+                                            <i class="fas fa-file-contract"></i>
+                                            Registro legal
+                                        </span>
+                                        <span class="security-badge">
+                                            <i class="fas fa-chart-line"></i>
+                                            Gestão de risco
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Entregador -->
+                            <div class="card plan-card" onclick="selectRole('deliveryman')">
+                                <div class="card-body">
+                                    <div class="flex items-center gap-4">
+                                        <div style="width: 48px; height: 48px; border-radius: var(--radius-full); background-color: var(--success-bg); display: flex; align-items: center; justify-content: center;">
+                                            <i class="fas fa-truck" style="color: var(--success); font-size: 1.5rem;"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="mb-1">Entregador</h3>
+                                            <p class="text-muted text-sm">
+                                                Você executa entregas com profissionalismo e transparência
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 flex gap-3 flex-wrap">
+                                        <span class="security-badge">
+                                            <i class="fas fa-badge-check"></i>
+                                            Verificação completa
+                                        </span>
+                                        <span class="security-badge">
+                                            <i class="fas fa-star"></i>
+                                            Score de confiabilidade
+                                        </span>
+                                        <span class="security-badge">
+                                            <i class="fas fa-history"></i>
+                                            Histórico público
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <button onclick="showAuthModal()" class="btn btn-outline">
+                        <i class="fas fa-sync-alt"></i>
+                        Trocar usuário
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Dashboard Empreendedor -->
+    <div id="entrepreneur-dashboard" style="display: none;">
+        <div class="sidebar">
+            <nav>
+                <a href="#" class="nav-item active" onclick="showEntrepreneurView('overview')">
+                    <i class="fas fa-tachometer-alt nav-icon"></i>
+                    <span class="nav-text">Visão Geral</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showEntrepreneurView('new-delivery')">
+                    <i class="fas fa-plus-circle nav-icon"></i>
+                    <span class="nav-text">Nova Entrega</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showEntrepreneurView('active-deliveries')">
+                    <i class="fas fa-truck-moving nav-icon"></i>
+                    <span class="nav-text">Entregas Ativas</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showEntrepreneurView('history')">
+                    <i class="fas fa-history nav-icon"></i>
+                    <span class="nav-text">Histórico</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showEntrepreneurView('subscription')">
+                    <i class="fas fa-shield-alt nav-icon"></i>
+                    <span class="nav-text">Proteção RIZOMA</span>
+                </a>
+            </nav>
+        </div>
+
+        <main class="main-content">
+            <!-- Visão Geral -->
+            <div id="entrepreneur-overview">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1>Visão Geral</h1>
+                        <p class="text-muted mt-2">
+                            Suas entregas protegidas pela infraestrutura RIZOMA
+                        </p>
+                    </div>
+                    <div id="plan-status-badge" class="security-badge" style="background-color: var(--warning-bg); color: var(--warning);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Plano necessário
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Entregas Concluídas</div>
+                                <div class="text-2xl font-bold" data-deliveries-count="24">24</div>
+                            </div>
+                            <div class="status-badge status-success">
+                                <i class="fas fa-check"></i>
+                                100% seguro
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Entregas em Andamento</div>
+                                <div class="text-2xl font-bold">3</div>
+                            </div>
+                            <div class="status-badge status-info">
+                                <i class="fas fa-shield-alt"></i>
+                                Protegidas
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Score Médio Entregadores</div>
+                                <div class="text-2xl font-bold text-success">9.2</div>
+                            </div>
+                            <div>/10 de confiabilidade</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Cobertura RIZOMA</div>
+                                <div class="text-2xl font-bold text-info" id="coverage-amount">R$ 0</div>
+                            </div>
+                            <div>por entrega</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Entregas Recentes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Entregas Recentes</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="flex flex-col gap-4">
+                            <!-- Entrega 1 -->
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3>#DEV-00123</h3>
+                                        <span class="status-badge status-success">Concluída</span>
+                                    </div>
+                                    <div class="text-muted text-sm">
+                                        Smartphone Premium • Av. Paulista, 1000 → R. Augusta, 500
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold mb-1">João Silva</div>
+                                    <div class="trust-score">9.8</div>
+                                </div>
+                            </div>
+
+                            <!-- Entrega 2 -->
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3>#DEV-00122</h3>
+                                        <span class="status-badge status-info">Em andamento</span>
+                                    </div>
+                                    <div class="text-muted text-sm">
+                                        Documentos importantes • R. Bela Cintra → R. Oscar Freire
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold mb-1">Maria Santos</div>
+                                    <div class="trust-score">9.5</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nova Entrega -->
+            <div id="entrepreneur-new-delivery" style="display: none;">
+                <div style="max-width: 800px;">
+                    <div class="mb-6">
+                        <h1>Nova Entrega</h1>
+                        <p class="text-muted mt-2">
+                            Crie uma entrega protegida pela infraestrutura RIZOMA
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="plan-required-alert" class="mb-6 p-4 bg-warning-bg text-warning rounded-lg border border-warning" style="display: none;">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>Plano necessário:</strong> Ative um plano para criar entregas protegidas.
+                                        <a href="#" onclick="showEntrepreneurView('subscription')" class="underline ml-1">Escolher plano</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="plan-active-alert" class="mb-6 p-4 bg-success-bg text-success rounded-lg border border-success" style="display: none;">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <div>
+                                        <strong>Proteção ativa:</strong> Esta entrega será protegida pela RIZOMA
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form id="new-delivery-form">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);">
+                                    <div class="form-group">
+                                        <label class="form-label">Tipo de Produto</label>
+                                        <select class="form-control" required>
+                                            <option value="">Selecione...</option>
+                                            <option value="documents">Documentos</option>
+                                            <option value="electronics">Eletrônicos</option>
+                                            <option value="valuables">Itens de valor</option>
+                                            <option value="other">Outros</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Valor declarado</label>
+                                        <input type="number" class="form-control" placeholder="R$" required>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);">
+                                    <div class="form-group">
+                                        <label class="form-label">Endereço de coleta</label>
+                                        <input type="text" class="form-control" placeholder="Endereço completo" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Endereço de entrega</label>
+                                        <input type="text" class="form-control" placeholder="Endereço completo" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Instruções especiais</label>
+                                    <textarea class="form-control" rows="3" placeholder="Instruções para o entregador..."></textarea>
+                                </div>
+
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <i class="fas fa-shield-alt" style="color: var(--success);"></i>
+                                        <div>
+                                            <div class="font-bold">Proteção RIZOMA</div>
+                                            <div class="text-muted text-sm">
+                                                <span id="coverage-text">Ative um plano para ter cobertura</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-full mt-6" id="create-delivery-btn">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Criar Entrega Protegida
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entregas Ativas -->
+            <div id="entrepreneur-active-deliveries" style="display: none;">
+                <div class="mb-6">
+                    <h1>Entregas Ativas</h1>
+                    <p class="text-muted mt-2">
+                        Acompanhe suas entregas em tempo real
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <!-- Checkpoints Timeline -->
+                        <div class="mb-6">
+                            <h3 class="mb-4">Entrega #DEV-00122</h3>
+                            <div class="checkpoint-timeline">
+                                <div class="checkpoint completed">
+                                    <div class="checkpoint-icon">
+                                        <i class="fas fa-clipboard-check"></i>
+                                    </div>
+                                    <div class="checkpoint-content">
+                                        <div class="font-bold">Pedido criado</div>
+                                        <div class="text-muted text-sm">
+                                            15/06/2023 10:30 • Criado por você
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="checkpoint completed">
+                                    <div class="checkpoint-icon">
+                                        <i class="fas fa-user-check"></i>
+                                    </div>
+                                    <div class="checkpoint-content">
+                                        <div class="font-bold">Entregador aceito</div>
+                                        <div class="text-muted text-sm">
+                                            15/06/2023 11:15 • Maria Santos (Score: 9.5)
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="checkpoint completed">
+                                    <div class="checkpoint-icon">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </div>
+                                    <div class="checkpoint-content">
+                                        <div class="font-bold">Check-in no local de coleta</div>
+                                        <div class="text-muted text-sm">
+                                            15/06/2023 11:45 • R. Bela Cintra, 1200
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="checkpoint completed">
+                                    <div class="checkpoint-icon">
+                                        <i class="fas fa-camera"></i>
+                                    </div>
+                                    <div class="checkpoint-content">
+                                        <div class="font-bold">Confirmação do produto</div>
+                                        <div class="text-muted text-sm">
+                                            15/06/2023 11:47 • Foto + código verificados
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="checkpoint active">
+                                    <div class="checkpoint-icon">
+                                        <i class="fas fa-truck-moving"></i>
+                                    </div>
+                                    <div class="checkpoint-content">
+                                        <div class="font-bold">Em trânsito</div>
+                                        <div class="text-muted text-sm">
+                                            Previsão de chegada: 15/06/2023 14:00
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="checkpoint">
+                                    <div class="checkpoint-icon">
+                                        <i class="fas fa-flag-checkered"></i>
+                                    </div>
+                                    <div class="checkpoint-content">
+                                        <div class="font-bold">Check-in no destino</div>
+                                        <div class="text-muted text-sm">
+                                            Aguardando chegada
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="checkpoint">
+                                    <div class="checkpoint-icon">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <div class="checkpoint-content">
+                                        <div class="font-bold">Confirmação do cliente</div>
+                                        <div class="text-muted text-sm">
+                                            Aguardando confirmação
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info do Entregador -->
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <h4 class="mb-3">Entregador Responsável</h4>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="deliveryman-avatar">MS</div>
+                                    <div>
+                                        <div class="font-bold">Maria Santos</div>
+                                        <div class="text-muted text-sm">
+                                            127 entregas concluídas • Score: 9.5
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline">
+                                    <i class="fas fa-phone"></i>
+                                    Contatar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Histórico -->
+            <div id="entrepreneur-history" style="display: none;">
+                <div class="mb-6">
+                    <h1>Histórico de Entregas</h1>
+                    <p class="text-muted mt-2">
+                        Todas as suas entregas concluídas
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="text-center p-6">
+                            <i class="fas fa-history text-4xl text-gray-300 mb-4"></i>
+                            <h3 class="mb-2">Histórico em construção</h3>
+                            <p class="text-muted">
+                                Esta funcionalidade será implementada na versão final
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proteção RIZOMA -->
+            <div id="entrepreneur-subscription" style="display: none;">
+                <div style="max-width: 800px;">
+                    <div class="mb-6">
+                        <h1>Proteção RIZOMA</h1>
+                        <p class="text-muted mt-2">
+                            Sua assinatura de infraestrutura de confiança
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="current-plan-display" class="flex items-center justify-between mb-6 p-4 bg-gray-50 rounded-lg" style="display: none;">
+                                <div>
+                                    <h2 class="mb-2" id="active-plan-name">Plano Profissional</h2>
+                                    <div class="text-muted">
+                                        <span id="active-plan-desc">Até 50 entregas protegidas por mês</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold" id="active-plan-price">R$ 199,90</div>
+                                    <div class="text-muted">/mês</div>
+                                </div>
+                            </div>
+
+                            <div id="no-plan-display" class="mb-6">
+                                <div class="text-center p-6 bg-gray-50 rounded-lg">
+                                    <i class="fas fa-shield-alt text-4xl text-gray-300 mb-4"></i>
+                                    <h3 class="mb-2">Nenhum plano ativo</h3>
+                                    <p class="text-muted mb-4">
+                                        Escolha um plano para criar entregas protegidas
+                                    </p>
+                                </div>
+                            </div>
+
+                            <h3 class="mb-4">Escolha seu plano</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <!-- Plano Básico -->
+                                <div class="plan-card" onclick="selectPlan('basic')">
+                                    <div class="card-body">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 class="mb-1">Básico</h3>
+                                                <div class="text-2xl font-bold">R$ 79,90</div>
+                                                <div class="text-muted">/mês</div>
+                                            </div>
+                                            <div class="security-badge bg-gray-100 text-gray-600">
+                                                <i class="fas fa-box"></i>
+                                                10 entregas/mês
+                                            </div>
+                                        </div>
+                                        <ul class="space-y-2 mb-4">
+                                            <li class="flex items-center gap-2">
+                                                <i class="fas fa-check text-success"></i>
+                                                <span>Entregadores verificados</span>
+                                            </li>
+                                            <li class="flex items-center gap-2">
+                                                <i class="fas fa-check text-success"></i>
+                                                <span>Cobertura até R$ 1.000</span>
+                                            </li>
+                                            <li class="flex items-center gap-2">
+                                                <i class="fas fa-check text-success"></i>
+                                                <span>Suporte por email</span>
+                                            </li>
+                                        </ul>
+                                        <button class="btn btn-outline w-full">
+                                            Selecionar Plano
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Plano Profissional -->
+                                <div class="plan-card" onclick="selectPlan('professional')">
+                                    <div class="card-body">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 class="mb-1">Profissional</h3>
+                                                <div class="text-2xl font-bold">R$ 199,90</div>
+                                                <div class="text-muted">/mês</div>
+                                            </div>
+                                            <div class="security-badge bg-success-bg text-success">
+                                                <i class="fas fa-crown"></i>
+                                                Mais popular
+                                            </div>
+                                        </div>
+                                        <ul class="space-y-2 mb-4">
+                                            <li class="flex items-center gap-2">
+                                                <i class="fas fa-check text-success"></i>
+                                                <span>Até 50 entregas/mês</span>
+                                            </li>
+                                            <li class="flex items-center gap-2">
+                                                <i class="fas fa-check text-success"></i>
+                                                <span>Cobertura até R$ 5.000</span>
+                                            </li>
+                                            <li class="flex items-center gap-2">
+                                                <i class="fas fa-check text-success"></i>
+                                                <span>Suporte prioritário</span>
+                                            </li>
+                                            <li class="flex items-center gap-2">
+                                                <i class="fas fa-check text-success"></i>
+                                                <span>Relatórios avançados</span>
+                                            </li>
+                                        </ul>
+                                        <button class="btn btn-primary w-full">
+                                            Selecionar Plano
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pagamento Simulado -->
+                            <div id="payment-section" style="display: none;">
+                                <div class="p-4 border border-gray-300 rounded-lg mb-4">
+                                    <h4 class="mb-3">Pagamento (Simulação)</h4>
+                                    <p class="text-muted text-sm mb-4">
+                                        <i class="fas fa-info-circle"></i>
+                                        No produto real: integração com Stripe, PagSeguro ou PayPal
+                                    </p>
+                                    
+                                    <div class="space-y-3">
+                                        <button onclick="simulatePayment('credit_card')" class="btn btn-outline w-full">
+                                            <i class="fas fa-credit-card"></i>
+                                            Cartão de Crédito (Simulação)
+                                        </button>
+                                        
+                                        <button onclick="simulatePayment('pix')" class="btn btn-outline w-full">
+                                            <i class="fas fa-qrcode"></i>
+                                            PIX (Simulação)
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="mt-4 p-3 bg-gray-50 rounded">
+                                        <span class="demo-badge">Demonstração</span>
+                                        <span class="text-sm text-muted ml-2">
+                                            Pagamento simulado para testar o fluxo
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6">
+                                <h3 class="mb-4">Benefícios incluídos</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="p-4 bg-gray-50 rounded-lg">
+                                        <div class="font-bold mb-2">
+                                            <i class="fas fa-user-shield text-info mr-2"></i>
+                                            Entregadores verificados
+                                        </div>
+                                        <div class="text-muted text-sm">
+                                            Acesso exclusivo à rede verificada
+                                        </div>
+                                    </div>
+
+                                    <div class="p-4 bg-gray-50 rounded-lg">
+                                        <div class="font-bold mb-2">
+                                            <i class="fas fa-file-contract text-success mr-2"></i>
+                                            Registro legal
+                                        </div>
+                                        <div class="text-muted text-sm">
+                                            Documentação completa de cada entrega
+                                        </div>
+                                    </div>
+
+                                    <div class="p-4 bg-gray-50 rounded-lg">
+                                        <div class="font-bold mb-2">
+                                            <i class="fas fa-shield-alt text-warning mr-2"></i>
+                                            Gestão de risco
+                                        </div>
+                                        <div class="text-muted text-sm">
+                                            Cobertura por entrega
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6">
+                                <h3 class="mb-4">Uso do plano</h3>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div>
+                                            <div class="font-bold">Limite mensal</div>
+                                            <div class="text-muted text-sm">
+                                                <span id="plan-usage">0/0</span> entregas utilizadas
+                                            </div>
+                                        </div>
+                                        <div class="w-48 h-2 bg-gray-300 rounded-full overflow-hidden">
+                                            <div id="plan-usage-bar" class="h-full bg-success" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-muted mt-2">
+                                        Renovação automática todo dia 1º do mês
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Dashboard Entregador -->
+    <div id="deliveryman-dashboard" style="display: none;">
+        <div class="sidebar">
+            <nav>
+                <a href="#" class="nav-item active" onclick="showDeliverymanView('overview')">
+                    <i class="fas fa-tachometer-alt nav-icon"></i>
+                    <span class="nav-text">Visão Geral</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showDeliverymanView('available-deliveries')">
+                    <i class="fas fa-list nav-icon"></i>
+                    <span class="nav-text">Entregas Disponíveis</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showDeliverymanView('active-deliveries')">
+                    <i class="fas fa-truck-moving nav-icon"></i>
+                    <span class="nav-text">Minhas Entregas</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showDeliverymanView('profile')">
+                    <i class="fas fa-user-check nav-icon"></i>
+                    <span class="nav-text">Meu Perfil</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showDeliverymanView('verification')">
+                    <i class="fas fa-shield-alt nav-icon"></i>
+                    <span class="nav-text">Verificação</span>
+                </a>
+            </nav>
+        </div>
+
+        <main class="main-content">
+            <!-- Visão Geral -->
+            <div id="deliveryman-overview">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1>Visão Geral</h1>
+                        <p class="text-muted mt-2">
+                            Seu perfil de entregador verificado RIZOMA
+                        </p>
+                    </div>
+                    <div class="security-badge">
+                        <i class="fas fa-badge-check"></i>
+                        <span id="verification-level">Verificado nível 3</span>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Score de Confiabilidade</div>
+                                <div class="text-2xl font-bold text-success">9.5</div>
+                            </div>
+                            <div>/10 • Top 15% da plataforma</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Entregas Concluídas</div>
+                                <div class="text-2xl font-bold">127</div>
+                            </div>
+                            <div class="status-badge status-success">
+                                <i class="fas fa-check"></i>
+                                100% satisfação
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Entregas em Andamento</div>
+                                <div class="text-2xl font-bold">2</div>
+                            </div>
+                            <div class="status-badge status-info">
+                                <i class="fas fa-clock"></i>
+                                Em progresso
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-sm text-muted">Renda do Mês</div>
+                                <div class="text-2xl font-bold text-info">R$ 2.850</div>
+                            </div>
+                            <div>+15% vs mês anterior</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Entregas Recentes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Entregas Recentes</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="flex flex-col gap-4">
+                            <!-- Entrega 1 -->
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3>#DEV-00122</h3>
+                                        <span class="status-badge status-info">Em andamento</span>
+                                    </div>
+                                    <div class="text-muted text-sm">
+                                        Documentos • R. Bela Cintra → R. Oscar Freire
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold mb-1">Tech Solutions LTDA</div>
+                                    <div class="text-muted text-sm">
+                                        Valor: R$ 25,90
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Entrega 2 -->
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3>#DEV-00121</h3>
+                                        <span class="status-badge status-success">Concluída</span>
+                                    </div>
+                                    <div class="text-muted text-sm">
+                                        Pacote pequeno • Av. Paulista → R. Augusta
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold mb-1">Maria Silva</div>
+                                    <div class="text-muted text-sm">
+                                        Avaliação: ★★★★★
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entregas Disponíveis -->
+            <div id="deliveryman-available-deliveries" style="display: none;">
+                <div class="mb-6">
+                    <h1>Entregas Disponíveis</h1>
+                    <p class="text-muted mt-2">
+                        Selecione entregas que correspondem ao seu perfil
+                    </p>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                    <!-- Entrega 1 -->
+                    <div class="deliveryman-card">
+                        <div class="deliveryman-header">
+                            <div class="deliveryman-info">
+                                <div class="deliveryman-avatar">TS</div>
+                                <div>
+                                    <div class="font-bold">Tech Solutions LTDA</div>
+                                    <div class="text-muted text-sm">
+                                        Empreendedor verificado • Score: 9.8
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="trust-score">9.8</div>
+                        </div>
+
+                        <div>
+                            <h3 class="mb-2">Documentos importantes</h3>
+                            <div class="text-muted mb-3">
+                                R. Bela Cintra, 1200 → R. Oscar Freire, 800
+                            </div>
+
+                            <div class="deliveryman-stats">
+                                <div class="stat-item">
+                                    <div class="stat-value">R$ 25,90</div>
+                                    <div class="stat-label">Valor</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">3km</div>
+                                    <div class="stat-label">Distância</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">30min</div>
+                                    <div class="stat-label">Estimativa</div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3 mt-4">
+                                <button class="btn btn-outline flex-1">
+                                    <i class="fas fa-info-circle"></i>
+                                    Detalhes
+                                </button>
+                                <button class="btn btn-success flex-1" onclick="acceptDelivery('DEV-00122')">
+                                    <i class="fas fa-check"></i>
+                                    Aceitar Entrega
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Entrega 2 -->
+                    <div class="deliveryman-card">
+                        <div class="deliveryman-header">
+                            <div class="deliveryman-info">
+                                <div class="deliveryman-avatar">JS</div>
+                                <div>
+                                    <div class="font-bold">João Silva</div>
+                                    <div class="text-muted text-sm">
+                                        Microempreendedor • Score: 9.2
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="trust-score">9.2</div>
+                        </div>
+
+                        <div>
+                            <h3 class="mb-2">Smartphone Premium</h3>
+                            <div class="text-muted mb-3">
+                                Av. Paulista, 1000 → R. Augusta, 500
+                            </div>
+
+                            <div class="deliveryman-stats">
+                                <div class="stat-item">
+                                    <div class="stat-value">R$ 35,50</div>
+                                    <div class="stat-label">Valor</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">5km</div>
+                                    <div class="stat-label">Distância</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">45min</div>
+                                    <div class="stat-label">Estimativa</div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3 mt-4">
+                                <button class="btn btn-outline flex-1">
+                                    <i class="fas fa-info-circle"></i>
+                                    Detalhes
+                                </button>
+                                <button class="btn btn-success flex-1" onclick="acceptDelivery('DEV-00123')">
+                                    <i class="fas fa-check"></i>
+                                    Aceitar Entrega
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Minhas Entregas -->
+            <div id="deliveryman-active-deliveries" style="display: none;">
+                <div class="mb-6">
+                    <h1>Minhas Entregas</h1>
+                    <p class="text-muted mt-2">
+                        Entregas que você está executando agora
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="text-center p-6">
+                            <i class="fas fa-truck text-4xl text-gray-300 mb-4"></i>
+                            <h3 class="mb-2">Nenhuma entrega ativa</h3>
+                            <p class="text-muted mb-4">
+                                Aceite uma entrega disponível para começar
+                            </p>
+                            <button class="btn btn-primary" onclick="showDeliverymanView('available-deliveries')">
+                                <i class="fas fa-list"></i>
+                                Ver entregas disponíveis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Perfil do Entregador -->
+            <div id="deliveryman-profile" style="display: none;">
+                <div style="max-width: 800px;">
+                    <div class="mb-6">
+                        <h1>Meu Perfil Público</h1>
+                        <p class="text-muted mt-2">
+                            Como os empreendedores te veem na plataforma
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="deliveryman-avatar" style="width: 80px; height: 80px; font-size: 1.5rem;">
+                                    MS
+                                </div>
+                                <div class="flex-1">
+                                    <h2 class="mb-2">Maria Santos</h2>
+                                    <div class="flex items-center gap-3">
+                                        <span class="trust-score">9.5</span>
+                                        <span class="security-badge">
+                                            <i class="fas fa-badge-check"></i>
+                                            Verificado nível 3
+                                        </span>
+                                        <span class="text-muted">
+                                            <i class="fas fa-star" style="color: var(--warning);"></i>
+                                            4.9 (127 avaliações)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div class="p-4 bg-gray-50 rounded-lg">
+                                    <div class="stat-value">127</div>
+                                    <div class="stat-label">Entregas concluídas</div>
+                                </div>
+                                <div class="p-4 bg-gray-50 rounded-lg">
+                                    <div class="stat-value">100%</div>
+                                    <div class="stat-label">Taxa de sucesso</div>
+                                </div>
+                                <div class="p-4 bg-gray-50 rounded-lg">
+                                    <div class="stat-value">12min</div>
+                                    <div class="stat-label">Tempo médio</div>
+                                </div>
+                                <div class="p-4 bg-gray-50 rounded-lg">
+                                    <div class="stat-value">2 anos</div>
+                                    <div class="stat-label">Na plataforma</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="mb-4">Verificações Concluídas</h3>
+                                <div class="flex flex-col gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span>Identidade verificada</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span>Antecedentes criminais limpos</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span>Veículo registrado e segurado</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span>Certificação de manuseio</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verificação -->
+            <div id="deliveryman-verification" style="display: none;">
+                <div style="max-width: 800px;">
+                    <div class="mb-6">
+                        <h1>Verificação RIZOMA</h1>
+                        <p class="text-muted mt-2">
+                            Complete as etapas para aumentar seu nível de verificação
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3>Seu nível atual: <span class="text-success">3</span>/3</h3>
+                                    <span class="security-badge">
+                                        <i class="fas fa-crown"></i>
+                                        Máxima confiabilidade
+                                    </span>
+                                </div>
+                                
+                                <div class="w-full h-2 bg-gray-200 rounded-full mb-6">
+                                    <div class="h-full bg-success rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <!-- Etapa 1 -->
+                                <div class="p-4 border border-gray-300 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-success-bg text-success flex items-center justify-center">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                            <div>
+                                                <h4>Nível 1: Identificação básica</h4>
+                                                <p class="text-sm text-muted">Documento de identidade e selfie</p>
+                                            </div>
+                                        </div>
+                                        <span class="status-badge status-success">Concluído</span>
+                                    </div>
+                                </div>
+
+                                <!-- Etapa 2 -->
+                                <div class="p-4 border border-gray-300 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-success-bg text-success flex items-center justify-center">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                            <div>
+                                                <h4>Nível 2: Antecedentes e veículo</h4>
+                                                <p class="text-sm text-muted">Antecedentes criminais + documentos do veículo</p>
+                                            </div>
+                                        </div>
+                                        <span class="status-badge status-success">Concluído</span>
+                                    </div>
+                                </div>
+
+                                <!-- Etapa 3 -->
+                                <div class="p-4 border border-gray-300 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-success-bg text-success flex items-center justify-center">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                            <div>
+                                                <h4>Nível 3: Certificação completa</h4>
+                                                <p class="text-sm text-muted">Treinamento + histórico limpo + seguros</p>
+                                            </div>
+                                        </div>
+                                        <span class="status-badge status-success">Concluído</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 p-4 bg-success-bg text-success rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-award text-xl"></i>
+                                    <div>
+                                        <div class="font-bold">Verificação completa</div>
+                                        <p class="text-sm">Você tem acesso a todas as entregas da plataforma</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // === ESTADO GLOBAL DA APLICAÇÃO ===
+        const appState = {
+            user: {
+                logged: false,
+                role: null, // 'entrepreneur' ou 'deliveryman'
+                plan: null, // 'basic', 'professional', null
+                planActive: false,
+                profile: null,
+                deliveriesCount: 24
+            },
+            deliveries: [
+                { id: 'DEV-00123', status: 'completed', customer: 'João Silva', score: 9.8 },
+                { id: 'DEV-00122', status: 'active', customer: 'Maria Santos', score: 9.5 }
+            ]
+        };
+
+        // === FUNÇÕES DE AUTENTICAÇÃO ===
+        function showAuthModal() {
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function hideAuthModal() {
+            document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        function simulateLogin() {
+            const email = document.getElementById('auth-email').value;
+            
+            appState.user = {
+                logged: true,
+                role: null,
+                plan: null,
+                planActive: false,
+                profile: {
+                    name: email.includes('entregador') ? 'Maria Santos' : 'João Empreendedor',
+                    email: email,
+                    company: email.includes('entregador') ? 'Entregador Independente' : 'Tech Solutions LTDA'
+                },
+                deliveriesCount: 24
+            };
+            
+            updateUIAfterAuth();
+            hideAuthModal();
+            
+            // Mostrar página de seleção de papel
+            document.getElementById('role-selection-page').style.display = 'block';
+            document.getElementById('user-name-display').textContent = appState.user.profile.name;
+        }
+
+        function simulateRegister() {
+            const email = document.getElementById('auth-email').value;
+            
+            appState.user = {
+                logged: true,
+                role: null,
+                plan: null,
+                planActive: false,
+                profile: {
+                    name: 'Novo Usuário',
+                    email: email,
+                    company: 'Minha Empresa'
+                },
+                deliveriesCount: 0
+            };
+            
+            updateUIAfterAuth();
+            hideAuthModal();
+            
+            // Mostrar página de seleção de papel
+            document.getElementById('role-selection-page').style.display = 'block';
+            document.getElementById('user-name-display').textContent = appState.user.profile.name;
+            
+            alert('✅ Cadastro simulado com sucesso! Agora escolha seu papel.');
+        }
+
+        function logout() {
+            appState.user = {
+                logged: false,
+                role: null,
+                plan: null,
+                planActive: false,
+                profile: null,
+                deliveriesCount: 0
+            };
+            
+            // Esconder tudo
+            document.getElementById('role-selection-page').style.display = 'none';
+            document.getElementById('entrepreneur-dashboard').style.display = 'none';
+            document.getElementById('deliveryman-dashboard').style.display = 'none';
+            document.getElementById('role-indicator').style.display = 'none';
+            document.getElementById('plan-indicator').style.display = 'none';
+            document.getElementById('logout-btn').style.display = 'none';
+            
+            // Mostrar login
+            showAuthModal();
+        }
+
+        // === FUNÇÕES DE PLANO ===
+        function selectPlan(planType) {
+            if (planType === 'basic') {
+                appState.user.plan = 'basic';
+                appState.user.planActive = true;
+                appState.user.deliveriesCount = 10; // Reset para plano básico
+            } else if (planType === 'professional') {
+                appState.user.plan = 'professional';
+                appState.user.planActive = true;
+                appState.user.deliveriesCount = 50; // Reset para plano profissional
+            }
+            
+            // Atualizar UI
+            updatePlanUI();
+            
+            // Mostrar seção de pagamento (simulação)
+            document.getElementById('payment-section').style.display = 'block';
+            
+            // Scroll para pagamento
+            document.getElementById('payment-section').scrollIntoView({ behavior: 'smooth' });
+            
+            alert(`📋 Plano ${planType === 'basic' ? 'Básico' : 'Profissional'} selecionado!`);
+        }
+
+        function simulatePayment(method) {
+            // Simular processamento
+            setTimeout(() => {
+                alert(`✅ Pagamento via ${method === 'credit_card' ? 'Cartão de Crédito' : 'PIX'} simulado com sucesso!\n\nPlano ${appState.user.plan === 'basic' ? 'Básico' : 'Profissional'} ativado.`);
+                
+                // Atualizar estado
+                appState.user.planActive = true;
+                
+                // Atualizar UI
+                updatePlanUI();
+                
+                // Esconder seção de pagamento
+                document.getElementById('payment-section').style.display = 'none';
+                
+                // Atualizar botão de criar entrega
+                updateCreateDeliveryButton();
+                
+                // Mostrar mensagem de sucesso
+                showEntrepreneurView('overview');
+                
+                alert('🎉 Agora você pode criar entregas protegidas!');
+            }, 1000);
+        }
+
+        function requirePlan() {
+            if (!appState.user.planActive) {
+                // Mostrar alerta
+                const alert = document.getElementById('plan-required-alert');
+                if (alert) alert.style.display = 'block';
+                
+                // Redirecionar para planos após 2 segundos
+                setTimeout(() => {
+                    showEntrepreneurView('subscription');
+                }, 2000);
+                
+                return false;
+            }
+            return true;
+        }
+
+        // === FUNÇÕES DE UI ===
+        function updateUIAfterAuth() {
+            // Mostrar indicadores no header
+            document.getElementById('role-indicator').style.display = 'flex';
+            document.getElementById('plan-indicator').style.display = 'flex';
+            document.getElementById('logout-btn').style.display = 'flex';
+            
+            // Atualizar nome do usuário no header do papel
+            updatePlanUI();
+        }
+
+        function updatePlanUI() {
+            const planIndicator = document.getElementById('current-plan');
+            const planStatusBadge = document.getElementById('plan-status-badge');
+            const coverageAmount = document.getElementById('coverage-amount');
+            const coverageText = document.getElementById('coverage-text');
+            const createDeliveryBtn = document.getElementById('create-delivery-btn');
+            const planRequiredAlert = document.getElementById('plan-required-alert');
+            const planActiveAlert = document.getElementById('plan-active-alert');
+            const currentPlanDisplay = document.getElementById('current-plan-display');
+            const noPlanDisplay = document.getElementById('no-plan-display');
+            const activePlanName = document.getElementById('active-plan-name');
+            const activePlanDesc = document.getElementById('active-plan-desc');
+            const activePlanPrice = document.getElementById('active-plan-price');
+            const planUsage = document.getElementById('plan-usage');
+            const planUsageBar = document.getElementById('plan-usage-bar');
+            
+            if (appState.user.planActive && appState.user.plan) {
+                // Usuário tem plano ativo
+                const planName = appState.user.plan === 'basic' ? 'Básico' : 'Profissional';
+                const planPrice = appState.user.plan === 'basic' ? 'R$ 79,90' : 'R$ 199,90';
+                const planDesc = appState.user.plan === 'basic' ? 'Até 10 entregas/mês' : 'Até 50 entregas/mês';
+                const coverage = appState.user.plan === 'basic' ? 'R$ 1.000' : 'R$ 5.000';
+                const maxDeliveries = appState.user.plan === 'basic' ? 10 : 50;
+                const usedDeliveries = appState.user.deliveriesCount > maxDeliveries ? maxDeliveries : appState.user.deliveriesCount;
+                const usagePercent = (usedDeliveries / maxDeliveries) * 100;
+                
+                // Atualizar header
+                planIndicator.textContent = planName;
+                planIndicator.style.backgroundColor = appState.user.plan === 'basic' ? 'var(--info-bg)' : 'var(--success-bg)';
+                planIndicator.style.color = appState.user.plan === 'basic' ? 'var(--info)' : 'var(--success)';
+                
+                // Atualizar badge de status
+                if (planStatusBadge) {
+                    planStatusBadge.innerHTML = `<i class="fas fa-shield-alt"></i> Plano ${planName} ativo`;
+                    planStatusBadge.style.backgroundColor = 'var(--success-bg)';
+                    planStatusBadge.style.color = 'var(--success)';
+                }
+                
+                // Atualizar valores de cobertura
+                if (coverageAmount) coverageAmount.textContent = coverage;
+                if (coverageText) coverageText.textContent = `Cobertura de até ${coverage} por entrega`;
+                
+                // Atualizar botão de criar entrega
+                if (createDeliveryBtn) {
+                    createDeliveryBtn.disabled = false;
+                    createDeliveryBtn.innerHTML = `<i class="fas fa-shield-alt"></i> Criar Entrega Protegida`;
+                }
+                
+                // Mostrar/ocultar alerts
+                if (planRequiredAlert) planRequiredAlert.style.display = 'none';
+                if (planActiveAlert) planActiveAlert.style.display = 'block';
+                
+                // Atualizar página de planos
+                if (currentPlanDisplay) {
+                    currentPlanDisplay.style.display = 'flex';
+                    activePlanName.textContent = `Plano ${planName}`;
+                    activePlanDesc.textContent = planDesc;
+                    activePlanPrice.textContent = planPrice;
+                }
+                if (noPlanDisplay) noPlanDisplay.style.display = 'none';
+                
+                // Atualizar uso do plano
+                if (planUsage) planUsage.textContent = `${usedDeliveries}/${maxDeliveries}`;
+                if (planUsageBar) planUsageBar.style.width = `${usagePercent}%`;
+            } else {
+                // Usuário não tem plano
+                planIndicator.textContent = 'Nenhum';
+                planIndicator.style.backgroundColor = 'var(--warning-bg)';
+                planIndicator.style.color = 'var(--warning)';
+                
+                if (planStatusBadge) {
+                    planStatusBadge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Plano necessário`;
+                    planStatusBadge.style.backgroundColor = 'var(--warning-bg)';
+                    planStatusBadge.style.color = 'var(--warning)';
+                }
+                
+                if (coverageAmount) coverageAmount.textContent = 'R$ 0';
+                if (coverageText) coverageText.textContent = 'Ative um plano para ter cobertura';
+                
+                if (createDeliveryBtn) {
+                    createDeliveryBtn.disabled = true;
+                    createDeliveryBtn.innerHTML = `<i class="fas fa-lock"></i> Plano necessário`;
+                }
+                
+                if (planRequiredAlert) planRequiredAlert.style.display = 'block';
+                if (planActiveAlert) planActiveAlert.style.display = 'none';
+                
+                if (currentPlanDisplay) currentPlanDisplay.style.display = 'none';
+                if (noPlanDisplay) noPlanDisplay.style.display = 'block';
+                
+                if (planUsage) planUsage.textContent = '0/0';
+                if (planUsageBar) planUsageBar.style.width = '0%';
+            }
+        }
+
+        function updateCreateDeliveryButton() {
+            const btn = document.getElementById('create-delivery-btn');
+            if (!btn) return;
+            
+            if (appState.user.planActive) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-shield-alt"></i> Criar Entrega Protegida`;
+                btn.className = btn.className.replace('btn-warning', 'btn-primary');
+            } else {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fas fa-lock"></i> Plano necessário`;
+                if (!btn.className.includes('btn-warning')) {
+                    btn.className = btn.className.replace('btn-primary', 'btn-warning');
+                }
+            }
+        }
+
+        // === FUNÇÕES DE SELEÇÃO DE PAPEL ===
+        function selectRole(role) {
+            appState.user.role = role;
+            
+            // Atualizar indicador de papel
+            const roleBadge = document.getElementById('current-role');
+            roleBadge.textContent = role === 'entrepreneur' ? 'Empreendedor' : 'Entregador';
+            
+            // Esconder seleção de papel
+            document.getElementById('role-selection-page').style.display = 'none';
+            
+            if (role === 'entrepreneur') {
+                // Mostrar dashboard empreendedor
+                document.getElementById('entrepreneur-dashboard').style.display = 'block';
+                document.getElementById('deliveryman-dashboard').style.display = 'none';
+                showEntrepreneurView('overview');
+                updatePlanUI(); // Atualizar UI do plano
+            } else {
+                // Mostrar dashboard entregador
+                document.getElementById('entrepreneur-dashboard').style.display = 'none';
+                document.getElementById('deliveryman-dashboard').style.display = 'block';
+                showDeliverymanView('overview');
+            }
+        }
+
+        // === FUNÇÕES DE NAVEGAÇÃO ===
+        function showEntrepreneurView(view) {
+            // Esconder todas as views
+            const views = ['overview', 'new-delivery', 'active-deliveries', 'history', 'subscription'];
+            views.forEach(v => {
+                const el = document.getElementById(`entrepreneur-${v}`);
+                if (el) el.style.display = 'none';
+            });
+            
+            // Mostrar view selecionada
+            const targetView = document.getElementById(`entrepreneur-${view}`);
+            if (targetView) targetView.style.display = 'block';
+            
+            // Atualizar menu ativo
+            updateActiveNav('entrepreneur', view);
+            
+            // Atualizar UI do plano quando necessário
+            if (view === 'new-delivery' || view === 'subscription') {
+                updatePlanUI();
+            }
+        }
+
+        function showDeliverymanView(view) {
+            // Esconder todas as views
+            const views = ['overview', 'available-deliveries', 'active-deliveries', 'profile', 'verification'];
+            views.forEach(v => {
+                const el = document.getElementById(`deliveryman-${v}`);
+                if (el) el.style.display = 'none';
+            });
+            
+            // Mostrar view selecionada
+            const targetView = document.getElementById(`deliveryman-${view}`);
+            if (targetView) targetView.style.display = 'block';
+            
+            // Atualizar menu ativo
+            updateActiveNav('deliveryman', view);
+        }
+
+        function updateActiveNav(dashboard, view) {
+            // Remover active de todos
+            const navItems = document.querySelectorAll(`#${dashboard}-dashboard .nav-item`);
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            // Adicionar active ao item correto
+            const viewMap = {
+                'overview': 'Visão Geral',
+                'new-delivery': 'Nova Entrega',
+                'active-deliveries': 'Entregas Ativas',
+                'history': 'Histórico',
+                'subscription': 'Proteção RIZOMA',
+                'available-deliveries': 'Entregas Disponíveis',
+                'profile': 'Meu Perfil',
+                'verification': 'Verificação'
+            };
+            
+            const targetText = viewMap[view];
+            navItems.forEach(item => {
+                const textElement = item.querySelector('.nav-text');
+                if (textElement && textElement.textContent === targetText) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // === FUNÇÕES DE ENTREGA ===
+        function acceptDelivery(deliveryId) {
+            if (confirm(`Aceitar entrega ${deliveryId}?\n\nVocê será redirecionado para acompanhar o progresso.`)) {
+                alert(`✅ Entrega ${deliveryId} aceita com sucesso!\n\nAgora siga o fluxo de checkpoints.`);
+                showDeliverymanView('active-deliveries');
+            }
+        }
+
+        // === INICIALIZAÇÃO ===
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esconder tudo inicialmente
+            document.getElementById('role-selection-page').style.display = 'none';
+            document.getElementById('entrepreneur-dashboard').style.display = 'none';
+            document.getElementById('deliveryman-dashboard').style.display = 'none';
+            
+            // Configurar formulário de nova entrega
+            const newDeliveryForm = document.getElementById('new-delivery-form');
+            if (newDeliveryForm) {
+                newDeliveryForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    if (!requirePlan()) return;
+                    
+                    // Incrementar contador
+                    appState.user.deliveriesCount++;
+                    
+                    // Atualizar contador na UI
+                    const counter = document.querySelector('[data-deliveries-count]');
+                    if (counter) {
+                        counter.textContent = appState.user.deliveriesCount;
+                    }
+                    
+                    // Simular criação da entrega
+                    alert('🚚 Entrega criada com sucesso!\n\nAgora ela está disponível para entregadores verificados na plataforma.');
+                    
+                    // Resetar formulário
+                    this.reset();
+                    
+                    // Voltar para visão geral
+                    showEntrepreneurView('overview');
+                    
+                    // Atualizar uso do plano
+                    updatePlanUI();
+                });
+            }
+            
+            // Mostrar modal de login após 500ms
+            setTimeout(() => {
+                showAuthModal();
+            }, 500);
+        });
+
+        // Expor funções para HTML
+        window.selectRole = selectRole;
+        window.showEntrepreneurView = showEntrepreneurView;
+        window.showDeliverymanView = showDeliverymanView;
+        window.selectPlan = selectPlan;
+        window.simulatePayment = simulatePayment;
+        window.acceptDelivery = acceptDelivery;
+        window.showAuthModal = showAuthModal;
+        window.simulateLogin = simulateLogin;
+        window.simulateRegister = simulateRegister;
+        window.logout = logout;
+    </script>
+</body>
+</html>

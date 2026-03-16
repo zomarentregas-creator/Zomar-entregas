@@ -1,0 +1,143 @@
+import {
+    Home,
+    Package,
+    Truck,
+    History,
+    DollarSign,
+    MapPin,
+    TrendingUp,
+    CreditCard,
+    Settings,
+    User,
+    Bell,
+    HelpCircle,
+    Shield,
+  } from 'lucide-react';
+  import { SidebarSection } from './types';
+  
+  export const SIDEBAR_SECTIONS: SidebarSection[] = [
+    {
+      id: 'main',
+      title: 'Menu Principal',
+      links: [
+        {
+          id: 'dashboard-entrepreneur',
+          label: 'Dashboard',
+          to: '/entrepreneur-dashboard',
+          icon: Home,
+          roles: ['entrepreneur'],
+        },
+        {
+          id: 'dashboard-deliverer',
+          label: 'Dashboard',
+          to: '/deliverer/dashboard',
+          icon: Home,
+          roles: ['deliverer'],
+        },
+        {
+          id: 'active-deliveries',
+          label: 'Entregas Ativas',
+          to: '/active-deliveries',
+          icon: Package,
+          roles: ['entrepreneur'],
+          badgeKey: 'activeDeliveries',
+        },
+        {
+          id: 'new-delivery',
+          label: 'Nova Entrega',
+          to: '/new-delivery',
+          icon: MapPin,
+          roles: ['entrepreneur'],
+        },
+        {
+          id: 'available-deliveries',
+          label: 'Buscar Entregas',
+          to: '/deliverer/available-deliveries',
+          icon: Package,
+          roles: ['deliverer'],
+        },
+        {
+          id: 'my-deliveries',
+          label: 'Minhas Entregas',
+          to: '/deliverer/my-deliveries',
+          icon: Truck,
+          roles: ['deliverer'],
+          badgeKey: 'activeDeliveries',
+        },
+        {
+          id: 'earnings',
+          label: 'Meus Ganhos',
+          to: '/deliverer/earnings',
+          icon: DollarSign,
+          roles: ['deliverer'],
+          badgeKey: 'pendingPayments',
+        },
+        {
+          id: 'history',
+          label: 'Histórico',
+          to: '/delivery-history',
+          icon: History,
+          roles: ['entrepreneur', 'deliverer'],
+        },
+        {
+          id: 'overview',
+          label: 'Visão Geral',
+          to: '/overview',
+          icon: TrendingUp,
+          roles: ['entrepreneur'],
+        },
+        {
+          id: 'subscription',
+          label: 'Assinatura',
+          to: '/subscription',
+          icon: CreditCard,
+          roles: ['entrepreneur'],
+        },
+        {
+          {
+            id: 'admin-dashboard',
+            label: 'Admin',
+            to: '/admin',
+            icon: Shield,
+            roles: ['admin'],
+          },
+        },
+      ],
+    },
+    {
+      id: 'account',
+      title: 'Sua Conta',
+      links: [
+        {
+          id: 'profile',
+          label: 'Meu Perfil',
+          to: '/profile',
+          icon: User,
+          roles: ['entrepreneur', 'deliverer', 'admin'],
+        },
+        {
+          id: 'notifications',
+          label: 'Notificações',
+          to: '/notifications',
+          icon: Bell,
+          roles: ['entrepreneur', 'deliverer', 'admin'],
+          badgeKey: 'notifications',
+        },
+        {
+          id: 'settings',
+          label: 'Configurações',
+          to: '/settings',
+          icon: Settings,
+          roles: ['entrepreneur', 'deliverer', 'admin'],
+        },
+        {
+          id: 'help',
+          label: 'Ajuda',
+          to: '/help',
+          icon: HelpCircle,
+          roles: ['entrepreneur', 'deliverer', 'admin'],
+        },
+      ],
+    },
+  ];
+  
