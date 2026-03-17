@@ -31,7 +31,6 @@ const HERO_SLIDES = [
   },
 ]
 
-// Helper: redirect based on role
 function getRoleRedirect(role: string | null) {
   if (role === 'admin') return '/admin/dashboard'
   if (role === 'deliverer') return '/deliverer/dashboard'
@@ -46,7 +45,12 @@ export default function Login() {
   const [slideIn, setSlideIn] = useState(true)
   const [imgLoaded, setImgLoaded] = useState(false)
 
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'admin'>('login')
+  // ── NOTA: modo 'admin' removido da UI pública.
+  // O admin faz login normalmente com 'login' — o redirecionamento
+  // acontece automaticamente pelo RoleGuard com base no role do Supabase.
+  // Para criar um admin, faz directamente no Supabase Dashboard:
+  //   UPDATE profiles SET role = 'admin' WHERE user_id = 'uuid-do-utilizador';
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
   const [isDarkMode, setIsDarkMode] = useState(true)
 
   const [email, setEmail] = useState('')
@@ -62,10 +66,6 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
-
-  // Admin secret code (for front-end gate — real security is Supabase RLS + role check)
-  const [adminCode, setAdminCode] = useState('')
-  const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'ZOMAR_ADMIN_2024'
 
   useEffect(() => {
     const next = (slide + 1) % HERO_SLIDES.length
@@ -102,7 +102,6 @@ export default function Login() {
     setFullName('')
     setPhone('')
     setDocVal('')
-    setAdminCode('')
     setError(null)
     setSuccessMessage('')
   }
@@ -120,10 +119,6 @@ export default function Login() {
       if (!fullName.trim()) return 'Nome completo é obrigatório'
       if (password !== confirmPassword) return 'As senhas não coincidem'
       if (userType === 'deliverer' && !phone) return 'Telefone é obrigatório para entregadores'
-    }
-    if (mode === 'admin') {
-      if (!adminCode) return 'Código de administrador é obrigatório'
-      if (adminCode !== ADMIN_SECRET) return 'Código de administrador inválido'
     }
     return null
   }
@@ -144,22 +139,15 @@ export default function Login() {
         setTimeout(() => switchMode('login'), 3000)
 
       } else if (mode === 'signup') {
-        const result = await signUp(email, password, fullName, userType, phone)
+        // ── Impede criação de conta com role 'admin' via UI ──
+        // O role 'admin' só pode ser atribuído directamente no Supabase Dashboard.
+        const safeRole: UserRole = userType === ('admin' as any) ? 'entrepreneur' : userType
+        const result = await signUp(email, password, fullName, safeRole, phone)
         if (!result.success) throw new Error(result.error || 'Erro ao criar conta')
         setSuccessMessage('✅ Conta criada! Verifique o seu email.')
 
-      } else if (mode === 'admin') {
-        // Admin logs in normally — role check happens after
-        const result = await signIn(email, password)
-        if (!result.success) {
-          if (result.error?.includes('Invalid login credentials')) throw new Error('Email ou senha incorretos.')
-          throw new Error(result.error || 'Erro ao fazer login')
-        }
-        // The useEffect will redirect to /admin/dashboard if role === 'admin'
-        // If not admin, show error
-        // We let the navigation handle it; if role is wrong, guard will redirect away
-
       } else {
+        // Login normal — admin é redirecionado pelo RoleGuard automaticamente
         const result = await signIn(email, password)
         if (!result.success) {
           if (result.error?.includes('Email not confirmed')) throw new Error('Email não confirmado. Verifique a sua caixa de entrada.')
@@ -204,19 +192,16 @@ export default function Login() {
   }`
 
   const current = HERO_SLIDES[slide]
-  const isAdminMode = mode === 'admin'
 
   const getTitle = () => {
     if (mode === 'forgot') return 'Recuperar Senha'
     if (mode === 'signup') return 'Criar Conta'
-    if (mode === 'admin') return 'Acesso Admin'
     return 'Bem-vindo de volta'
   }
 
   const getSubtitle = () => {
     if (mode === 'forgot') return 'Digite seu email para recuperar'
     if (mode === 'signup') return 'Preencha os dados para começar'
-    if (mode === 'admin') return 'Área restrita — apenas administradores'
     return 'Entre com suas credenciais'
   }
 
@@ -226,9 +211,6 @@ export default function Login() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className={`absolute top-0 left-1/4 w-[700px] h-[700px] rounded-full blur-[140px] ${isDarkMode ? 'bg-emerald-600/6' : 'bg-emerald-400/12'}`} />
         <div className={`absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full blur-[120px] ${isDarkMode ? 'bg-teal-500/5' : 'bg-teal-300/15'}`} />
-        {isAdminMode && (
-          <div className="absolute inset-0 bg-orange-500/3 pointer-events-none" />
-        )}
       </div>
 
       <button
@@ -244,7 +226,7 @@ export default function Login() {
 
       <div className="z-0 absolute-card-glow" />
 
-      <div className={`relative z-10 w-full max-w-[860px] rounded-[28px] p-[1.5px] ${isAdminMode ? 'admin-border' : 'animated-border'}`}>
+      <div className={`relative z-10 w-full max-w-[860px] rounded-[28px] p-[1.5px] animated-border`}>
 
         <div style={{ backgroundColor: cardBg }} className="relative w-full rounded-[26.5px] overflow-hidden flex min-h-[560px]">
 
@@ -310,16 +292,6 @@ export default function Login() {
               <span className="font-black text-lg tracking-widest">ZOMAR</span>
             </div>
 
-            {/* Admin mode badge */}
-            {isAdminMode && (
-              <div className={`mb-4 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold ${
-                isDarkMode ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-orange-50 border border-orange-200 text-orange-600'
-              }`}>
-                <Shield size={14} />
-                ACESSO RESTRITO — ADMINISTRADORES
-              </div>
-            )}
-
             <div className="mb-7">
               <h3 className={`text-2xl font-bold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{getTitle()}</h3>
               <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-gray-500'}`}>{getSubtitle()}</p>
@@ -342,7 +314,7 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-3">
 
-              {/* Role picker (signup only) */}
+              {/* Role picker — apenas entrepreneur e deliverer */}
               {mode === 'signup' && (
                 <div className="grid grid-cols-2 gap-2.5 mb-1">
                   {(['entrepreneur', 'deliverer'] as UserRole[]).map(role => (
@@ -364,7 +336,7 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Full name (signup only) */}
+              {/* Full name */}
               {mode === 'signup' && (
                 <div className="group relative">
                   <User size={17} className={iconCls} />
@@ -378,7 +350,7 @@ export default function Login() {
                 <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className={inputCls} required />
               </div>
 
-              {/* Phone (signup deliverer) */}
+              {/* Phone */}
               {mode === 'signup' && (
                 <div className="group relative">
                   <Phone size={17} className={iconCls} />
@@ -386,7 +358,7 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Doc (signup deliverer) */}
+              {/* Doc (deliverer only) */}
               {mode === 'signup' && userType === 'deliverer' && (
                 <div className="group relative">
                   <CreditCard size={17} className={iconCls} />
@@ -416,21 +388,6 @@ export default function Login() {
                 </>
               )}
 
-              {/* Admin secret code */}
-              {mode === 'admin' && (
-                <div className="group relative">
-                  <Shield size={17} className={`${iconCls} text-orange-400`} />
-                  <input
-                    type="password"
-                    placeholder="Código de Administrador"
-                    value={adminCode}
-                    onChange={e => setAdminCode(e.target.value)}
-                    className={`${inputCls} border-orange-500/30 focus:border-orange-500/60`}
-                    required
-                  />
-                </div>
-              )}
-
               {/* Forgot password link */}
               {mode === 'login' && (
                 <div className="text-right -mt-1">
@@ -440,14 +397,12 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Submit button */}
+              {/* Submit */}
               <button type="submit" disabled={localLoading}
                 className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200 mt-1 ${
                   localLoading
                     ? isDarkMode ? 'bg-white/8 text-white/30 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : isAdminMode
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99]'
-                      : 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.01] active:scale-[0.99]'
+                    : 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.01] active:scale-[0.99]'
                 }`}
               >
                 {localLoading ? (
@@ -455,11 +410,11 @@ export default function Login() {
                     <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
                     Processando...
                   </span>
-                ) : mode === 'forgot' ? 'Enviar Email' : mode === 'signup' ? 'Criar Conta' : mode === 'admin' ? 'Entrar como Admin' : 'Entrar'}
+                ) : mode === 'forgot' ? 'Enviar Email' : mode === 'signup' ? 'Criar Conta' : 'Entrar'}
               </button>
             </form>
 
-            {/* Google OAuth (non-admin, non-forgot) */}
+            {/* Google OAuth */}
             {(mode === 'login' || mode === 'signup') && (
               <>
                 <div className="relative my-5">
@@ -513,22 +468,18 @@ export default function Login() {
                   </button>
                 </p>
               )}
-              {(mode === 'forgot' || mode === 'admin') && (
+              {mode === 'forgot' && (
                 <button onClick={() => switchMode('login')} className={`text-xs text-center w-full flex items-center justify-center gap-1.5 ${isDarkMode ? 'text-white/35 hover:text-white/60' : 'text-gray-400 hover:text-gray-600'}`}>
                   <X size={13} /> Voltar ao login
                 </button>
               )}
-              {mode === 'login' && (
-                <button
-                  onClick={() => switchMode('admin')}
-                  className={`w-full text-center text-[11px] flex items-center justify-center gap-1.5 transition-colors ${
-                    isDarkMode ? 'text-white/20 hover:text-orange-400/60' : 'text-gray-300 hover:text-orange-500'
-                  }`}
-                >
-                  <Shield size={11} />
-                  Acesso de Administrador
-                </button>
-              )}
+
+              {/* ── ACESSO ADMIN REMOVIDO DA UI PÚBLICA ──
+                  Para aceder como admin, usa o login normal com as credenciais
+                  de uma conta que tenha role='admin' no Supabase.
+                  Para promover um utilizador a admin, corre no SQL Editor:
+                  UPDATE profiles SET role = 'admin' WHERE user_id = 'uuid';
+              */}
             </div>
 
           </div>
@@ -540,11 +491,6 @@ export default function Login() {
         .animated-border {
           --ba: 0deg;
           background: conic-gradient(from var(--ba), rgba(16,185,129,0.05) 0%, rgba(16,185,129,0.90) 18%, rgba(52,211,153,0.85) 28%, rgba(6,182,212,0.75) 38%, rgba(20,184,166,0.50) 50%, rgba(6,182,212,0.15) 62%, rgba(16,185,129,0.05) 72%, rgba(16,185,129,0.05) 100%);
-          animation: spin-border 6s linear infinite;
-        }
-        .admin-border {
-          --ba: 0deg;
-          background: conic-gradient(from var(--ba), rgba(249,115,22,0.05) 0%, rgba(249,115,22,0.90) 18%, rgba(251,191,36,0.85) 28%, rgba(245,158,11,0.75) 38%, rgba(249,115,22,0.50) 50%, rgba(249,115,22,0.15) 62%, rgba(249,115,22,0.05) 72%, rgba(249,115,22,0.05) 100%);
           animation: spin-border 6s linear infinite;
         }
         @keyframes spin-border { from { --ba: 0deg; } to { --ba: 360deg; } }
