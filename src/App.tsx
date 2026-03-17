@@ -39,7 +39,7 @@ import Settings from './components/shared/Settings';
 // Se estão em src/components/shared/ usa './components/shared/HelpPage'
 // Se estão em src/pages/            usa './pages/HelpPage'
 import HelpPage from './components/shared/HelpPage';
-import TermsPage from './components/shared/TermsPage';
+import TermsPage from './components/shared/Termspage';
 
 // ========== LAYOUTS ==========
 import EntrepreneurLayout from './components/layouts/EntrepreneurLayout';
