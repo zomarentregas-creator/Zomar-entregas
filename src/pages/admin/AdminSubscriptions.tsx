@@ -1,7 +1,7 @@
 // src/pages/admin/AdminSubscriptions.tsx
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
 import ReactDOM from 'react-dom'
-import AdminLayout from '../components/Admin/Adminlayout'
+import AdminLayout from '../../components/Admin/Adminlayout'
 import { useTheme } from '../../contexts/ThemeContext'
 import { supabase } from '../../lib/supabase'
 import {

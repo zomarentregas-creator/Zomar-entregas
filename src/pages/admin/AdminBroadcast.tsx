@@ -1,6 +1,6 @@
 // src/pages/admin/AdminActivityLog.tsx
 import React, { useState, useEffect, useCallback } from 'react'
-import AdminLayout from '../../components/Admin/AdminLayout'
+import AdminLayout from '../../components/Admin/Adminlayout'
 import { useTheme } from '../../contexts/ThemeContext'
 import { supabase } from '../../lib/supabase'
 import {
