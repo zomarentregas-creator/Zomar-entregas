@@ -106,7 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // ✅ Criar perfil para novos utilizadores (nunca cria admin automaticamente)
+  // ✅ Criar perfil para novos utilizadores (Google OAuth, etc.)
+  // CORRECÇÃO: trust_score adicionado para evitar erro no trigger trg_log_profile_change
   const createUserProfile = async (authUserId: string): Promise<User | null> => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -126,7 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: safeRole,
           phone: authUser.user_metadata?.phone || '',
           created_at: new Date().toISOString(),
-          status: 'ativo'
+          status: 'ativo',
+          trust_score: 5.0  // ✅ CORRECÇÃO: evita erro "record old has no field trust_score"
         }])
 
       if (insertError) {
@@ -279,6 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ============================================
   // CADASTRO (admin nunca pode ser criado aqui)
+  // CORRECÇÃO: trust_score adicionado em todos os INSERTs/UPDATEs
   // ============================================
   const signUp = async (
     email: string,
@@ -316,7 +319,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role,
           phone: phone || '',
           created_at: new Date().toISOString(),
-          status: 'ativo'
+          status: 'ativo',
+          trust_score: 5.0  // ✅ CORRECÇÃO: evita erro "record old has no field trust_score"
         }])
 
       if (profileError) {
@@ -324,7 +328,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (profileError.code === '23505') {
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({ full_name: fullName, role, phone: phone || '', status: 'ativo' })
+            .update({
+              full_name: fullName,
+              role,
+              phone: phone || '',
+              status: 'ativo',
+              trust_score: 5.0  // ✅ CORRECÇÃO: incluído também no update de fallback
+            })
             .eq('user_id', authData.user.id)
 
           if (updateError) return { success: false, error: 'Erro ao atualizar perfil' }
