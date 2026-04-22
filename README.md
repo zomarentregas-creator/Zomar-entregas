@@ -1,4 +1,4 @@
-# RIZOMA - Infraestrutura de Confiança para Entregas
+# ZOMAR - Infraestrutura de Confiança para Entregas
 
 Sistema de entregas conectando empreendedores a entregadores verificados.
 

@@ -312,6 +312,45 @@ export default function AdminSubscriptions() {
     }
   }
 
+  /* ── Activar plano pendente (confirmar pagamento manual) ── */
+  const activatePending = async (sub: Subscription) => {
+    if (!window.confirm(
+      `Activar plano "${sub.plan_name}" para este utilizador?
+
+` +
+      `Confirma que o pagamento de ${sub.price.toLocaleString('pt-MZ', { style:'currency', currency:'MZN', minimumFractionDigits:0 })} foi recebido.`
+    )) return
+    try {
+      const now    = new Date()
+      const renew  = new Date(now); renew.setMonth(renew.getMonth() + 1)
+      const { error } = await supabase.from('subscriptions').update({
+        status:       'active',
+        start_date:   now.toISOString(),
+        renewal_date: renew.toISOString(),
+        updated_at:   now.toISOString(),
+      }).eq('id', sub.id)
+      if (error) throw error
+
+      // Notificar o utilizador
+      try {
+        await supabase.from('notifications').insert({
+          user_id:    sub.user_id,
+          title:      '✅ Plano activado!',
+          message:    `O teu plano ${sub.plan_name} foi activado com sucesso. Bem-vindo ao ZOMAR!`,
+          type:       'payment',
+          read:       false,
+          delivery_id: null,
+        })
+      } catch { /* silencioso */ }
+
+      showToast(`✅ Plano "${sub.plan_name}" activado com sucesso!`)
+      closeDropdown()
+      load()
+    } catch (e: any) {
+      showToast(e.message || 'Erro ao activar.', 'err')
+    }
+  }
+
   const renewSub = async (sub: Subscription) => {
     try {
       const now      = new Date()
@@ -857,6 +896,19 @@ export default function AdminSubscriptions() {
 
                     {/* Acções de estado */}
                     <div className="py-1">
+
+                      {/* Botão de activação express — só aparece em pending */}
+                      {sub.status === 'pending' && (
+                        <button
+                          onClick={() => activatePending(sub)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold transition-colors ${
+                            isDark ? 'hover:bg-emerald-500/20 text-emerald-300 bg-emerald-500/10' : 'hover:bg-emerald-100 text-emerald-700 bg-emerald-50'
+                          }`}
+                        >
+                          <CheckCircle size={13}/> ✅ Activar — pagamento confirmado
+                        </button>
+                      )}
+
                       <button
                         onClick={() => quickAction(sub.id, 'active')}
                         disabled={sub.status === 'active'}

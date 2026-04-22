@@ -1,4 +1,4 @@
-// src/components/Admin/AdminLayout.tsx
+// src/components/Admin/Adminlayout.tsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'

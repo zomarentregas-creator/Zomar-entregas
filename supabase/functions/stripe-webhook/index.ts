@@ -1,12 +1,12 @@
-// supabase/functions/stripe-webhook/index.ts
 /**
  * ============================================================================
- * EDGE FUNCTION — stripe-webhook  (versão final, produção)
+ * EDGE FUNCTION — stripe-webhook  (versão corrigida)
  * ============================================================================
  *
  * Variáveis de ambiente necessárias:
  *   STRIPE_SECRET_KEY         sk_test_xxx  ou  sk_live_xxx
  *   STRIPE_WEBHOOK_SECRET     whsec_xxx
+ *   SUPABASE_URL              (disponível automaticamente)
  *   SUPABASE_SERVICE_ROLE_KEY (disponível automaticamente)
  *
  * Eventos a activar no Stripe Dashboard:
@@ -44,9 +44,9 @@ const STATUS_MAP: Record<string, string> = {
 }
 
 const MAX_DELIVERIES: Record<string, number> = {
-  plan_basic:        20,
-  plan_professional: 100,
-  plan_enterprise:   999999,
+  basic:        30,
+  professional: 100,
+  enterprise:   999999,
 }
 
 async function syncSubscription(
@@ -60,7 +60,8 @@ async function syncSubscription(
   const planName = meta?.plan_name ?? 'Plano'
   const price    = item?.price?.unit_amount ? item.price.unit_amount / 100 : 0
 
-  const { error } = await supabaseAdmin.from('subscriptions').upsert({
+  // FIX: upsert com user_id como campo de conflito (alinhado com o schema corrigido)
+  const { error: subError } = await supabaseAdmin.from('subscriptions').upsert({
     user_id:                userId,
     stripe_subscription_id: sub.id,
     stripe_customer_id:     sub.customer as string,
@@ -70,6 +71,7 @@ async function syncSubscription(
     price,
     status:                 STATUS_MAP[sub.status] ?? sub.status,
     max_deliveries:         MAX_DELIVERIES[planId] ?? 999999,
+    current_usage:          0,
     start_date:             new Date(sub.start_date * 1000).toISOString(),
     end_date:               sub.ended_at ? new Date(sub.ended_at * 1000).toISOString() : null,
     trial_ends_at:          sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
@@ -77,18 +79,29 @@ async function syncSubscription(
     cancel_at_period_end:   sub.cancel_at_period_end,
   }, { onConflict: 'user_id' })
 
-  if (error) { console.error('[syncSubscription]', error); throw error }
+  if (subError) {
+    console.error('[syncSubscription] subscriptions upsert error:', subError)
+    throw subError
+  }
 
-  await supabaseAdmin
+  // FIX: usar user_id em vez de id — id é a PK do profiles, user_id é a FK do auth.users
+  const { error: profileError } = await supabaseAdmin
     .from('profiles')
     .update({ stripe_customer_id: sub.customer as string })
-    .eq('id', userId)
+    .eq('user_id', userId)
+
+  if (profileError) {
+    // Não crítico — loga mas não interrompe
+    console.warn('[syncSubscription] profiles update warning:', profileError)
+  }
 
   console.log(`[webhook] synced: user=${userId} plan=${planId} status=${sub.status}`)
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 })
+  }
 
   const signature     = req.headers.get('stripe-signature')
   const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
@@ -113,10 +126,13 @@ Deno.serve(async (req: Request) => {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         if (session.mode !== 'subscription' || !session.subscription) break
+
         const userId = session.metadata?.supabase_user_id
-        if (!userId) { console.warn('[webhook] sem supabase_user_id'); break }
+        if (!userId) { console.warn('[webhook] checkout.session.completed sem supabase_user_id'); break }
 
         const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+
+        // Propagar metadata da session para a subscription se ainda não tiver
         if (!sub.metadata?.supabase_user_id) {
           await stripe.subscriptions.update(sub.id, {
             metadata: {
@@ -126,6 +142,7 @@ Deno.serve(async (req: Request) => {
             },
           })
         }
+
         await syncSubscription(userId, sub, session.metadata)
         break
       }
@@ -134,7 +151,10 @@ Deno.serve(async (req: Request) => {
       case 'customer.subscription.updated': {
         const sub    = event.data.object as Stripe.Subscription
         const userId = sub.metadata?.supabase_user_id
-        if (!userId) { console.warn(`[webhook] ${event.type} sem supabase_user_id`); break }
+        if (!userId) {
+          console.warn(`[webhook] ${event.type} sem supabase_user_id — ignorado`)
+          break
+        }
         await syncSubscription(userId, sub)
         break
       }
@@ -143,16 +163,19 @@ Deno.serve(async (req: Request) => {
         const sub    = event.data.object as Stripe.Subscription
         const userId = sub.metadata?.supabase_user_id
         if (!userId) break
+
         await supabaseAdmin
           .from('subscriptions')
           .update({ trial_ending_soon: true })
           .eq('stripe_subscription_id', sub.id)
+
         await supabaseAdmin.from('notifications').insert({
           user_id: userId,
           title:   '⏳ Trial a terminar em breve',
           message: 'O seu período de teste termina em 3 dias. Adicione um método de pagamento para continuar.',
           type:    'trial_ending',
           read:    false,
+          created_at: new Date().toISOString(),
         })
         break
       }
@@ -161,6 +184,7 @@ Deno.serve(async (req: Request) => {
         const sub    = event.data.object as Stripe.Subscription
         const userId = sub.metadata?.supabase_user_id
         if (!userId) break
+
         await supabaseAdmin
           .from('subscriptions')
           .update({
@@ -175,6 +199,7 @@ Deno.serve(async (req: Request) => {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
         if (!invoice.subscription) break
+
         const sub    = await stripe.subscriptions.retrieve(invoice.subscription as string)
         const userId = sub.metadata?.supabase_user_id
         if (!userId) break
@@ -206,6 +231,7 @@ Deno.serve(async (req: Request) => {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
         if (!invoice.subscription) break
+
         const sub    = await stripe.subscriptions.retrieve(invoice.subscription as string)
         const userId = sub.metadata?.supabase_user_id
         if (!userId) break
@@ -221,6 +247,7 @@ Deno.serve(async (req: Request) => {
           message: 'O pagamento da sua assinatura ZOMAR falhou. Por favor, actualize os seus dados de pagamento.',
           type:    'payment_failed',
           read:    false,
+          created_at: new Date().toISOString(),
         })
         break
       }
@@ -233,8 +260,12 @@ Deno.serve(async (req: Request) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
+
   } catch (err: any) {
     console.error(`[webhook] Erro no evento ${event.type}:`, err)
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 })

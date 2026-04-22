@@ -1,603 +1,448 @@
 // src/pages/Subscriptionpage.tsx
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  CheckCircle, Zap, Building2, Star,
-  ChevronRight, Loader2, Shield, Phone,
-  AlertCircle, X, RefreshCw, CreditCard,
-  Info, ArrowLeft, Clock,
+  CheckCircle, Zap, Building2, Star, ChevronRight,
+  Loader2, Shield, AlertCircle, X, RefreshCw,
+  Info, ArrowLeft, Clock, Package, Truck,
+  Calendar, TrendingUp, CreditCard, Smartphone,
+  ExternalLink,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import {
-  processPayment, detectProvider, validatePhone, formatPhone,
-  isSandbox, recordPaymentTransaction,
-  type PaymentProvider, type PaymentResult,
-} from '../lib/e2payments'
+import { PLANS, PLAN_MAP, formatMZN, stripeEnabled, type Plan } from '../config/plans'
+import { useStripe } from '../hooks/useStripe'
 
-// ─── Planos ────────────────────────────────────────────────────────────────────
-
-interface Plan {
-  id:           string
-  name:         string
-  price:        number          // MZN/mês
-  deliveries:   number | null   // null = ilimitado
-  badge?:       string
-  color:        string
-  features:     string[]
-  icon:         React.ReactNode
+interface Subscription {
+  id: string; user_id: string; plan_id: string; plan_name: string; price: number
+  status: 'active' | 'trialing' | 'canceled' | 'expired' | 'pending'
+  max_deliveries: number; current_usage: number; start_date: string
+  end_date: string | null; renewal_date: string | null; payment_method: 'stripe' | 'mobile_money' | null
 }
 
-const PLANS: Plan[] = [
-  {
-    id:         'basic',
-    name:       'Básico',
-    price:      750,
-    deliveries: 30,
-    color:      'emerald',
-    icon:       <Zap size={20}/>,
-    features: [
-      '30 entregas/mês incluídas',
-      'Entregas extra: 28 MZN cada',
-      'Cobertura até 30.000 MZN',
-      'Suporte por e-mail (24h)',
-      'Rastreamento básico',
-      'Relatórios mensais',
-    ],
-  },
-  {
-    id:         'professional',
-    name:       'Profissional',
-    price:      2200,
-    deliveries: 100,
-    badge:      'POPULAR',
-    color:      'blue',
-    icon:       <Star size={20}/>,
-    features: [
-      '100 entregas/mês incluídas',
-      'Entregas extra: 22 MZN cada',
-      'Cobertura até 100.000 MZN',
-      'Suporte prioritário (12h)',
-      'Rastreamento em tempo real',
-      'Relatórios semanais',
-      'API de integração básica',
-    ],
-  },
-  {
-    id:         'enterprise',
-    name:       'Empresarial',
-    price:      3800,
-    deliveries: null,
-    badge:      'RECOMENDADO',
-    color:      'purple',
-    icon:       <Building2 size={20}/>,
-    features: [
-      'Entregas ilimitadas',
-      'Cobertura até 500.000 MZN',
-      'Suporte 24/7 dedicado',
-      'Rastreamento avançado',
-      'Relatórios personalizados',
-      'API completa',
-      'Gestor de conta dedicado',
-    ],
-  },
-]
+type PayMethod = 'card' | 'mobile'
+type Step = 'plans' | 'choose_method' | 'mobile_instructions' | 'processing' | 'success' | 'error'
 
-const COLOR_MAP: Record<string, {
-  badge:   string
-  button:  string
-  bg:      string
-  border:  string
-  text:    string
-  icon:    string
-}> = {
-  emerald: {
-    badge:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
-    button: 'bg-emerald-500 hover:bg-emerald-400 text-black',
-    bg:     'bg-emerald-500/8',
-    border: 'border-emerald-500/25',
-    text:   'text-emerald-400',
-    icon:   'bg-emerald-500/15 text-emerald-400',
-  },
-  blue: {
-    badge:  'bg-blue-500/15 text-blue-400 border-blue-500/20',
-    button: 'bg-blue-500 hover:bg-blue-400 text-white',
-    bg:     'bg-blue-500/8',
-    border: 'border-blue-500/30',
-    text:   'text-blue-400',
-    icon:   'bg-blue-500/15 text-blue-400',
-  },
-  purple: {
-    badge:  'bg-purple-500/15 text-purple-400 border-purple-500/20',
-    button: 'bg-purple-500 hover:bg-purple-400 text-white',
-    bg:     'bg-purple-500/8',
-    border: 'border-purple-500/25',
-    text:   'text-purple-400',
-    icon:   'bg-purple-500/15 text-purple-400',
-  },
-  orange: {
-    badge:  'bg-orange-500/15 text-orange-400 border-orange-500/20',
-    button: 'bg-orange-500 hover:bg-orange-400 text-white',
-    bg:     'bg-orange-500/8',
-    border: 'border-orange-500/25',
-    text:   'text-orange-400',
-    icon:   'bg-orange-500/15 text-orange-400',
-  },
+const fmtDate = (d?: string | null) =>
+  d ? new Date(d).toLocaleDateString('pt-MZ', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '\u2014'
+
+const STATUS_CFG: Record<string, { label: string; color: string }> = {
+  active:   { label: 'Activo',                color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+  trialing: { label: 'Per\u00edodo de Teste', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+  canceled: { label: 'Cancelado',             color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' },
+  expired:  { label: 'Expirado',              color: 'text-red-400 bg-red-500/10 border-red-500/20' },
+  pending:  { label: 'Pagamento pendente',    color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
 }
 
-const fmtMZN = (v: number) =>
-  new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN', minimumFractionDigits: 0 }).format(v)
-
-const PROVIDER_LABELS: Record<PaymentProvider, { label: string; color: string; prefix: string }> = {
-  mpesa: { label: 'M-Pesa',  color: 'text-red-400',    prefix: '84/85' },
-  emola: { label: 'e-Mola',  color: 'text-blue-400',   prefix: '86/87' },
-  mkesh: { label: 'M-Kesh',  color: 'text-yellow-400', prefix: '83'    },
+const C: Record<string, { btn: string; bg: string; border: string; text: string; icon: string }> = {
+  blue:    { btn: 'bg-blue-500 hover:bg-blue-400 text-white',       bg: 'bg-blue-500/8',    border: 'border-blue-500/25',    text: 'text-blue-400',    icon: 'bg-blue-500/15 text-blue-400' },
+  emerald: { btn: 'bg-emerald-500 hover:bg-emerald-400 text-black', bg: 'bg-emerald-500/8', border: 'border-emerald-500/30', text: 'text-emerald-400', icon: 'bg-emerald-500/15 text-emerald-400' },
+  purple:  { btn: 'bg-purple-500 hover:bg-purple-400 text-white',   bg: 'bg-purple-500/8',  border: 'border-purple-500/25',  text: 'text-purple-400',  icon: 'bg-purple-500/15 text-purple-400' },
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SubscriptionPage() {
   const { user } = useAuth()
-  const navigate  = useNavigate()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const stripe = useStripe()
 
-  const [isDarkMode, setIsDarkMode] = useState(() =>
-    localStorage.getItem('entrepreneur_theme') !== 'light'
-  )
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('entrepreneur_theme') !== 'light')
   useEffect(() => {
-    const h = () => setIsDarkMode(localStorage.getItem('entrepreneur_theme') !== 'light')
-    window.addEventListener('storage', h)
-    return () => window.removeEventListener('storage', h)
+    const h = () => setIsDark(localStorage.getItem('entrepreneur_theme') !== 'light')
+    window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
-  // Estado actual da subscrição
-  const [currentSub, setCurrentSub]   = useState<any | null>(null)
-  const [loadingSub,  setLoadingSub]  = useState(true)
-
-  // Fluxo de pagamento
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
-  const [step,         setStep]         = useState<'plans' | 'payment' | 'processing' | 'success' | 'error'>('plans')
-  const [phone,        setPhone]        = useState('')
-  const [phoneInfo,    setPhoneInfo]    = useState<{ valid: boolean; provider: PaymentProvider | null; message: string } | null>(null)
-  const [processing,   setProcessing]  = useState(false)
-  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null)
-  const [errorMsg,     setErrorMsg]    = useState('')
-
-  const dk = (dark: string, light: string) => isDarkMode ? dark : light
+  const dk   = (d: string, l: string) => isDark ? d : l
   const card = `rounded-2xl border ${dk('bg-[#1a1a1a] border-white/8', 'bg-white border-gray-200 shadow-sm')}`
 
-  // ── Carregar subscrição actual ─────────────────────────────────────────────
-  const loadSub = useCallback(async () => {
+  const [sub,       setSub]       = useState<Subscription | null>(null)
+  const [loadSub,   setLoadSub]   = useState(true)
+  const [actLoad,   setActLoad]   = useState(false)
+  const [actMsg,    setActMsg]    = useState<{ ok: boolean; text: string } | null>(null)
+  const [step,      setStep]      = useState<Step>('plans')
+  const [selPlan,   setSelPlan]   = useState<Plan | null>(null)
+  const [payMethod, setPayMethod] = useState<PayMethod>('mobile')
+  const [errMsg,    setErrMsg]    = useState('')
+
+  // Retorno Stripe (query params)
+  useEffect(() => {
+    if (searchParams.get('success') === '1') { setStep('success'); setTimeout(() => load(), 3000) }
+    else if (searchParams.get('canceled') === '1') setActMsg({ ok: false, text: 'Pagamento cancelado.' })
+  }, []) // eslint-disable-line
+
+  const load = useCallback(async () => {
     if (!user?.id) return
-    setLoadingSub(true)
+    setLoadSub(true)
     try {
-      const { data } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single()
-      setCurrentSub(data || null)
-    } catch { setCurrentSub(null) }
-    finally { setLoadingSub(false) }
+      const { data } = await supabase.from('subscriptions').select('*').eq('user_id', user.id)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      setSub(data || null)
+    } catch { setSub(null) }
+    finally { setLoadSub(false) }
   }, [user?.id])
 
-  useEffect(() => { loadSub() }, [loadSub])
+  useEffect(() => { load() }, [load])
 
-  // ── Validar telefone ao escrever ───────────────────────────────────────────
   useEffect(() => {
-    if (!phone) { setPhoneInfo(null); return }
-    const clean = formatPhone(phone)
-    if (clean.length >= 2) setPhoneInfo(validatePhone(phone))
-    else setPhoneInfo(null)
-  }, [phone])
+    if (!user?.id) return
+    const prevStatus = sub?.status
+    const ch = supabase.channel('sub-pg')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subscriptions',
+        filter: `user_id=eq.${user.id}` }, () => {
+          load()
+          if (prevStatus === 'pending') setActMsg({ ok: true, text: '\u2705 Plano activado! J\u00e1 podes criar entregas.' })
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [user?.id, load, sub?.status])
 
-  // ── Seleccionar plano → ir para pagamento ──────────────────────────────────
-  const handleSelectPlan = (plan: Plan) => {
-    setSelectedPlan(plan)
-    setStep('payment')
-    setPhone('')
-    setPhoneInfo(null)
-    setPaymentResult(null)
-    setErrorMsg('')
+  useEffect(() => {
+    if (!actMsg) return
+    const t = setTimeout(() => setActMsg(null), 5000); return () => clearTimeout(t)
+  }, [actMsg])
+
+  const handleSelect = (plan: Plan) => {
+    if (sub?.plan_id === plan.id && (sub?.status === 'active' || sub?.status === 'trialing')) return
+    setSelPlan(plan); setErrMsg('')
+    if (!stripeEnabled() || !plan.stripe_price_id) { setPayMethod('mobile'); setStep('mobile_instructions') }
+    else setStep('choose_method')
   }
 
-  // ── Processar pagamento ────────────────────────────────────────────────────
-  const handlePay = async () => {
-    if (!selectedPlan || !user?.id || !phoneInfo?.valid) return
-    setProcessing(true)
-    setStep('processing')
-
+  const handleStripeCheckout = async () => {
+    if (!selPlan?.stripe_price_id) return
     try {
-      const reference = `ZOMAR-${selectedPlan.id.toUpperCase()}-${user.id.slice(0, 6).toUpperCase()}-${Date.now()}`
-
-      const result = await processPayment({
-        phone:     formatPhone(phone),
-        amount:    selectedPlan.price,
-        reference,
-        provider:  phoneInfo.provider || undefined,
-      })
-
-      setPaymentResult(result)
-
-      if (result.success) {
-        // Registar pagamento no Supabase
-        await recordPaymentTransaction({
-          userId:        user.id,
-          provider:      result.provider,
-          amount:        selectedPlan.price,
-          phone:         formatPhone(phone),
-          reference,
-          transactionId: result.transactionId || reference,
-          status:        'completed',
-        })
-
-        // Criar/actualizar subscrição
-        const now       = new Date()
-        const endDate   = new Date(now); endDate.setMonth(endDate.getMonth() + 1)
-        const renewDate = new Date(endDate); renewDate.setDate(renewDate.getDate() - 3)
-
-        // Cancelar plano activo anterior se existir
-        await supabase
-          .from('subscriptions')
-          .update({ status: 'cancelled' })
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-
-        // Criar nova subscrição
-        await supabase.from('subscriptions').insert({
-          user_id:        user.id,
-          plan_id:        selectedPlan.id,
-          plan_name:      selectedPlan.name,
-          price:          selectedPlan.price,
-          status:         'active',
-          max_deliveries: selectedPlan.deliveries || 0,
-          current_usage:  0,
-          start_date:     now.toISOString(),
-          end_date:       endDate.toISOString(),
-          renewal_date:   renewDate.toISOString(),
-        })
-
-        // Audit log — falha silenciosa, não bloqueia o fluxo
-        try {
-          await supabase.from('activity_logs').insert({
-            user_id:     user.id,
-            actor_id:    user.id,
-            action:      'subscription_created',
-            entity_type: 'subscription',
-            metadata:    {
-              plan:     selectedPlan.id,
-              price:    selectedPlan.price,
-              provider: result.provider,
-              tx_id:    result.transactionId,
-            },
-          })
-        } catch { /* silencioso */ }
-
-        setStep('success')
-        loadSub()
-      } else {
-        setErrorMsg(result.message || 'Pagamento não foi processado.')
-        setStep('error')
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Erro inesperado. Tenta novamente.')
+      setStep('processing')
+      await stripe.redirectToCheckout(selPlan.stripe_price_id, selPlan.id, selPlan.name)
+      setStep('choose_method')
+    } catch {
+      setErrMsg(stripe.error || 'Erro ao iniciar pagamento por cart\u00e3o.')
       setStep('error')
-    } finally {
-      setProcessing(false)
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const handleMobileRequest = async () => {
+    if (!selPlan || !user?.id) return
+    setStep('processing')
+    try {
+      if (sub?.status === 'pending') await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', sub.id)
+      const ref = `ZOMAR-${selPlan.id.toUpperCase()}-${user.id.slice(0,6).toUpperCase()}-${Date.now()}`
+      await supabase.from('subscriptions').insert({
+        user_id: user.id, plan_id: selPlan.id, plan_name: selPlan.name, price: selPlan.price,
+        status: 'pending', max_deliveries: selPlan.max_deliveries, current_usage: 0,
+        payment_method: 'mobile_money', start_date: new Date().toISOString(), renewal_date: null, notes: ref,
+      })
+      try { await supabase.from('activity_logs').insert({ user_id: user.id, actor_id: user.id,
+        action: 'subscription_requested', entity_type: 'subscription',
+        metadata: { plan: selPlan.id, price: selPlan.price, method: 'mobile_money', ref } }) } catch {}
+      setStep('success'); load()
+    } catch (e: any) { setErrMsg(e.message || 'Erro ao registar pedido.'); setStep('error') }
+  }
+
+  const handleCancel = async () => {
+    if (!sub || !window.confirm('Cancelar a assinatura?\n\nO acesso continua at\u00e9 ao fim do per\u00edodo actual.')) return
+    setActLoad(true)
+    try {
+      await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', sub.id)
+      setSub(p => p ? { ...p, status: 'canceled' } : null)
+      setActMsg({ ok: true, text: 'Assinatura cancelada. O acesso continua at\u00e9 ao fim do per\u00edodo.' })
+    } catch (e: any) { setActMsg({ ok: false, text: e.message || 'Erro ao cancelar.' }) }
+    finally { setActLoad(false) }
+  }
+
+  const handleReactivate = async () => {
+    if (!sub || !window.confirm('Reactivar a assinatura?')) return
+    setActLoad(true)
+    try {
+      const renewal = new Date(); renewal.setDate(renewal.getDate() + 30)
+      await supabase.from('subscriptions').update({ status: 'active', renewal_date: renewal.toISOString() }).eq('id', sub.id)
+      setSub(p => p ? { ...p, status: 'active', renewal_date: renewal.toISOString() } : null)
+      setActMsg({ ok: true, text: 'Assinatura reactivada!' })
+    } catch (e: any) { setActMsg({ ok: false, text: e.message || 'Erro ao reactivar.' }) }
+    finally { setActLoad(false) }
+  }
+
+  const handleStripePortal = async () => {
+    try { await stripe.redirectToPortal() }
+    catch { setActMsg({ ok: false, text: stripe.error || 'Erro ao abrir portal.' }) }
+  }
+
+  const isActive     = sub?.status === 'active' || sub?.status === 'trialing'
+  const isPending    = sub?.status === 'pending'
+  const isCanceled   = sub?.status === 'canceled'
+  const usagePct     = sub && sub.max_deliveries < 999_999 ? Math.min(100, Math.round((sub.current_usage / sub.max_deliveries) * 100)) : 0
+  const subStatus    = sub ? (STATUS_CFG[sub.status] || STATUS_CFG.pending) : null
+  const hasPaidByCard = sub?.payment_method === 'stripe'
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-4">
 
-      {/* Cabeçalho */}
       <div className="flex items-center gap-3">
         {step !== 'plans' && (
-          <button onClick={() => setStep('plans')}
-            className={`p-2 rounded-xl ${dk('hover:bg-white/8 text-gray-400', 'hover:bg-gray-100 text-gray-500')}`}>
+          <button onClick={() => setStep('plans')} className={`p-2 rounded-xl ${dk('hover:bg-white/8 text-gray-400','hover:bg-gray-100 text-gray-500')}`}>
             <ArrowLeft size={18}/>
           </button>
         )}
         <div>
-          <h2 className={`text-2xl font-bold ${dk('text-white', 'text-gray-900')}`}>
-            {step === 'plans' ? 'Escolhe o teu Plano' :
-             step === 'payment' ? 'Pagamento' :
-             step === 'processing' ? 'A processar…' :
-             step === 'success' ? 'Pagamento Confirmado!' : 'Erro no Pagamento'}
+          <h2 className={`text-2xl font-bold ${dk('text-white','text-gray-900')}`}>
+            {step==='plans'?'Planos e Subscri\u00e7\u00e3o':step==='choose_method'?'Como queres pagar?':step==='mobile_instructions'?'Instru\u00e7\u00f5es de pagamento':step==='processing'?'A processar\u2026':step==='success'?'Pedido registado!':'Algo correu mal'}
           </h2>
-          <p className={`text-sm mt-0.5 ${dk('text-gray-400', 'text-gray-500')}`}>
-            {step === 'plans' ? '7 dias grátis em todos os planos · Cancela quando quiseres' : ''}
-          </p>
+          {step==='plans' && <p className={`text-sm mt-0.5 ${dk('text-gray-400','text-gray-500')}`}>7 dias gr\u00e1tis \u00b7 Cart\u00e3o ou carteira m\u00f3vel \u00b7 Cancela quando quiseres</p>}
         </div>
       </div>
 
-      {/* Banner sandbox */}
-      {isSandbox() && (
-        <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${dk('bg-yellow-500/8 border-yellow-500/20', 'bg-yellow-50 border-yellow-200')}`}>
-          <Info size={15} className="text-yellow-400 flex-shrink-0"/>
-          <p className={`text-xs ${dk('text-yellow-300', 'text-yellow-700')}`}>
-            <strong>Modo Sandbox activo</strong> — Os pagamentos são simulados. Nenhum dinheiro real será cobrado.
-            Para produção, configura as variáveis <code className="font-mono">VITE_E2PAY_*</code> no <code className="font-mono">.env</code>.
-          </p>
+      {(actMsg || stripe.error) && (
+        <div className={`flex items-center gap-3 p-3.5 rounded-xl border text-sm ${(actMsg?.ok??false)?dk('bg-emerald-500/10 border-emerald-500/20 text-emerald-300','bg-emerald-50 border-emerald-200 text-emerald-700'):dk('bg-red-500/10 border-red-500/20 text-red-300','bg-red-50 border-red-200 text-red-700')}`}>
+          {actMsg?.ok?<CheckCircle size={14}/>:<AlertCircle size={14}/>}
+          <span className="flex-1">{actMsg?.text||stripe.error}</span>
+          <button onClick={()=>{setActMsg(null);stripe.clearError()}}><X size={12}/></button>
         </div>
       )}
 
-      {/* Plano actual */}
-      {step === 'plans' && !loadingSub && currentSub && (
-        <div className={`${card} p-4 flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${dk('bg-emerald-500/15', 'bg-emerald-50')}`}>
-              <CheckCircle size={15} className="text-emerald-400"/>
-            </div>
-            <div>
-              <p className={`text-sm font-bold ${dk('text-white', 'text-gray-900')}`}>
-                Plano {currentSub.plan_name} activo
-              </p>
-              <p className={`text-xs ${dk('text-gray-500', 'text-gray-400')}`}>
-                {currentSub.current_usage}/{currentSub.max_deliveries || '∞'} entregas · renova {
-                  currentSub.renewal_date
-                    ? new Date(currentSub.renewal_date).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'short' })
-                    : '—'
-                }
-              </p>
-            </div>
-          </div>
-          <span className={`text-xs px-2.5 py-1 rounded-full border ${dk('bg-emerald-500/15 text-emerald-400 border-emerald-500/20', 'bg-emerald-50 text-emerald-700 border-emerald-200')}`}>
-            Activo
-          </span>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════
-          STEP: PLANOS
-      ══════════════════════════════════════════════════════ */}
-      {step === 'plans' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {PLANS.map(plan => {
-            const c   = COLOR_MAP[plan.color]
-            const isCurrent = currentSub?.plan_id === plan.id
-
-            return (
-              <div key={plan.id}
-                className={`${card} p-6 flex flex-col relative ${plan.badge ? dk(`border-2 ${c.border}`, `border-2 ${c.border}`) : ''}`}>
-
-                {/* Badge */}
-                {plan.badge && (
-                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${c.badge}`}>
-                    {plan.badge}
-                  </div>
-                )}
-
-                {/* Ícone + nome */}
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${c.icon}`}>
-                  {plan.icon}
-                </div>
-                <h3 className={`text-lg font-black ${dk('text-white', 'text-gray-900')}`}>{plan.name}</h3>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className={`text-3xl font-black ${c.text}`}>{fmtMZN(plan.price)}</span>
-                  <span className={`text-sm ${dk('text-gray-500', 'text-gray-400')}`}>/mês</span>
-                </div>
-                <p className={`text-xs mb-5 ${dk('text-gray-500', 'text-gray-400')}`}>
-                  {plan.deliveries ? `${plan.deliveries} entregas incluídas` : 'Entregas ilimitadas'}
-                </p>
-
-                {/* Features */}
-                <ul className="space-y-2.5 flex-1 mb-6">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2">
-                      <CheckCircle size={13} className={`flex-shrink-0 mt-0.5 ${c.text}`}/>
-                      <span className={`text-xs ${dk('text-gray-300', 'text-gray-700')}`}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Botão */}
-                {isCurrent ? (
-                  <div className={`w-full py-3 rounded-xl text-center text-sm font-semibold ${dk('bg-white/5 text-gray-400', 'bg-gray-100 text-gray-500')}`}>
-                    Plano actual
-                  </div>
-                ) : (
-                  <button onClick={() => handleSelectPlan(plan)}
-                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98] ${c.button}`}>
-                    {currentSub ? 'Mudar para este plano' : 'Começar — 7 dias grátis'}
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════
-          STEP: PAGAMENTO
-      ══════════════════════════════════════════════════════ */}
-      {step === 'payment' && selectedPlan && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-          {/* Resumo do plano */}
+      {/* PLANOS */}
+      {step==='plans' && (<>
+        {!loadSub && sub && (
           <div className={`${card} p-5`}>
-            <h3 className={`font-bold mb-4 ${dk('text-white', 'text-gray-900')}`}>Resumo</h3>
-            <div className={`p-4 rounded-xl ${dk('bg-white/4', 'bg-gray-50')}`}>
-              <div className="flex justify-between mb-3">
-                <span className={`text-sm ${dk('text-gray-400', 'text-gray-600')}`}>Plano</span>
-                <span className={`text-sm font-bold ${dk('text-white', 'text-gray-900')}`}>{selectedPlan.name}</span>
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <Star size={14} className="text-emerald-400"/>
+                  <span className={`text-xs font-bold uppercase tracking-wider ${dk('text-gray-400','text-gray-500')}`}>Plano Actual</span>
+                  {subStatus && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${subStatus.color}`}>{subStatus.label}</span>}
+                  {sub.payment_method && (
+                    <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${hasPaidByCard?dk('border-blue-500/20 bg-blue-500/10 text-blue-400','border-blue-200 bg-blue-50 text-blue-700'):dk('border-orange-500/20 bg-orange-500/10 text-orange-400','border-orange-200 bg-orange-50 text-orange-700')}`}>
+                      {hasPaidByCard?<CreditCard size={9}/>:<Smartphone size={9}/>} {hasPaidByCard?'Cart\u00e3o':'Carteira m\u00f3vel'}
+                    </span>
+                  )}
+                </div>
+                <p className={`text-xl font-black ${dk('text-white','text-gray-900')}`}>{sub.plan_name}</p>
+                {PLAN_MAP[sub.plan_id] && <p className={`text-xs mt-0.5 ${dk('text-gray-500','text-gray-400')}`}>Cobertura at\u00e9 {formatMZN(PLAN_MAP[sub.plan_id].coverage)}</p>}
               </div>
-              <div className="flex justify-between mb-3">
-                <span className={`text-sm ${dk('text-gray-400', 'text-gray-600')}`}>Período</span>
-                <span className={`text-sm ${dk('text-gray-300', 'text-gray-700')}`}>Mensal</span>
-              </div>
-              <div className={`flex justify-between pt-3 border-t ${dk('border-white/8', 'border-gray-200')}`}>
-                <span className={`font-bold ${dk('text-white', 'text-gray-900')}`}>Total</span>
-                <span className={`text-xl font-black ${COLOR_MAP[selectedPlan.color].text}`}>
-                  {fmtMZN(selectedPlan.price)}
-                </span>
-              </div>
+              <p className={`text-2xl font-black ${dk('text-white','text-gray-900')}`}>{formatMZN(sub.price)}<span className={`text-sm font-normal ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span></p>
             </div>
 
-            <div className={`mt-4 flex items-start gap-2 p-3 rounded-xl text-xs ${dk('bg-blue-500/8 border border-blue-500/15 text-blue-300', 'bg-blue-50 border border-blue-200 text-blue-700')}`}>
-              <Shield size={13} className="flex-shrink-0 mt-0.5"/>
-              Pagamento seguro processado pelo e2Payments. O teu número é encriptado e nunca é partilhado.
-            </div>
-          </div>
-
-          {/* Formulário de pagamento */}
-          <div className={`${card} p-5`}>
-            <h3 className={`font-bold mb-1 ${dk('text-white', 'text-gray-900')}`}>Método de Pagamento</h3>
-            <p className={`text-xs mb-5 ${dk('text-gray-500', 'text-gray-400')}`}>
-              M-Pesa (84/85), e-Mola (86/87), M-Kesh (83) — o operador é detectado automaticamente
-            </p>
-
-            {/* Input do número */}
-            <div className="mb-4">
-              <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dk('text-gray-400', 'text-gray-500')}`}>
-                Número de Telemóvel
-              </label>
-              <div className="relative">
-                <div className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono ${dk('text-gray-500', 'text-gray-400')}`}>
-                  +258
+            {isPending && (
+              <div className={`flex items-start gap-3 p-4 rounded-xl mb-4 ${dk('bg-orange-500/8 border border-orange-500/20','bg-orange-50 border border-orange-200')}`}>
+                <Clock size={15} className="text-orange-400 flex-shrink-0 mt-0.5"/>
+                <div>
+                  <p className={`text-sm font-semibold ${dk('text-orange-300','text-orange-700')}`}>A aguardar confirma\u00e7\u00e3o de pagamento</p>
+                  <p className={`text-xs mt-0.5 ${dk('text-orange-400','text-orange-600')}`}>
+                    Enviaste o comprovativo por WhatsApp? A equipa activa em at\u00e9 2 horas. N\u00e3o enviaste? Envia para <strong>+258 84 XXX XXXX</strong>.
+                  </p>
                 </div>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value.replace(/[^\d]/g, '').slice(0, 9))}
-                  placeholder="84 XXX XXXX"
-                  maxLength={9}
-                  className={`w-full pl-12 pr-4 py-3 rounded-xl text-sm border outline-none transition-all font-mono tracking-wider ${
-                    phoneInfo?.valid === false
-                      ? dk('bg-red-500/5 border-red-500/40 text-white', 'bg-red-50 border-red-300 text-gray-900')
-                      : phoneInfo?.valid === true
-                        ? dk('bg-emerald-500/5 border-emerald-500/40 text-white', 'bg-emerald-50 border-emerald-300 text-gray-900')
-                        : dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/50', 'bg-gray-50 border-gray-200 text-gray-900 focus:border-orange-400')
-                  }`}
-                />
-                {phoneInfo?.valid && (
-                  <CheckCircle size={15} className={`absolute right-3 top-1/2 -translate-y-1/2 ${PROVIDER_LABELS[phoneInfo.provider!]?.color}`}/>
-                )}
               </div>
+            )}
 
-              {/* Feedback do número */}
-              {phoneInfo && (
-                <div className={`mt-1.5 flex items-center gap-1.5 text-xs ${
-                  phoneInfo.valid
-                    ? (phoneInfo.provider ? PROVIDER_LABELS[phoneInfo.provider].color : 'text-emerald-400')
-                    : 'text-red-400'
-                }`}>
-                  {phoneInfo.valid ? <CheckCircle size={11}/> : <AlertCircle size={11}/>}
-                  {phoneInfo.valid && phoneInfo.provider
-                    ? `${PROVIDER_LABELS[phoneInfo.provider].label} detectado`
-                    : phoneInfo.message}
+            {isActive && (
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {[
+                  { icon:<Package size={13}/>,   bg:dk('bg-emerald-500/10','bg-emerald-50'), color:'text-emerald-400', label:'Usadas',   value:`${sub.current_usage}${sub.max_deliveries<999_999?` / ${sub.max_deliveries}`:''}` },
+                  { icon:<TrendingUp size={13}/>, bg:dk('bg-blue-500/10','bg-blue-50'),      color:'text-blue-400',    label:'Restantes', value:sub.max_deliveries>=999_999?'\u221e':String(Math.max(0,sub.max_deliveries-sub.current_usage)) },
+                  { icon:<Calendar size={13}/>,   bg:dk('bg-purple-500/10','bg-purple-50'),  color:'text-purple-400',  label:'Renova\u00e7\u00e3o', value:fmtDate(sub.renewal_date) },
+                ].map(({icon,bg,color,label,value})=>(
+                  <div key={label} className={`flex items-center gap-2.5 p-3 rounded-xl ${dk('bg-white/4','bg-gray-50')}`}>
+                    <div className={`p-2 rounded-lg ${bg}`}><span className={color}>{icon}</span></div>
+                    <div>
+                      <p className={`text-[10px] uppercase tracking-wider ${dk('text-gray-500','text-gray-400')}`}>{label}</p>
+                      <p className={`text-sm font-bold ${dk('text-white','text-gray-900')}`}>{value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isActive && sub.max_deliveries<999_999 && (
+              <div className="mb-4">
+                <div className={`flex justify-between text-xs mb-1 ${dk('text-gray-500','text-gray-400')}`}><span>Uso do plano</span><span>{usagePct}%</span></div>
+                <div className={`w-full rounded-full h-2 ${dk('bg-white/8','bg-gray-200')}`}>
+                  <div className={`h-2 rounded-full transition-all ${usagePct>80?'bg-red-500':usagePct>50?'bg-yellow-500':'bg-emerald-500'}`} style={{width:`${usagePct}%`}}/>
                 </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 flex-wrap">
+              {isActive && <button onClick={()=>navigate('/entrepreneur/new-delivery')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${dk('bg-emerald-500 hover:bg-emerald-400 text-black','bg-emerald-600 hover:bg-emerald-700 text-white')}`}><Truck size={13}/> Nova Entrega</button>}
+              {isActive && hasPaidByCard && (
+                <button onClick={handleStripePortal} disabled={stripe.loading} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border ${dk('border-blue-500/25 bg-blue-500/8 text-blue-400 hover:bg-blue-500/15','border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100')}`}>
+                  {stripe.loading?<Loader2 size={13} className="animate-spin"/>:<ExternalLink size={13}/>} Gerir cart\u00e3o
+                </button>
               )}
-            </div>
-
-            {/* Logos dos operadores */}
-            <div className="grid grid-cols-3 gap-2 mb-5">
-              {(Object.entries(PROVIDER_LABELS) as [PaymentProvider, typeof PROVIDER_LABELS[PaymentProvider]][]).map(([key, val]) => (
-                <div key={key}
-                  className={`p-2.5 rounded-xl border text-center transition-all ${
-                    phoneInfo?.provider === key
-                      ? dk(`${COLOR_MAP[key === 'mpesa' ? 'orange' : key === 'emola' ? 'blue' : 'orange'].border} ${COLOR_MAP[key === 'mpesa' ? 'orange' : key === 'emola' ? 'blue' : 'orange'].bg}`, `border-orange-300 bg-orange-50`)
-                      : dk('border-white/8 bg-white/3', 'border-gray-200 bg-gray-50')
-                  }`}>
-                  <p className={`text-xs font-bold ${val.color}`}>{val.label}</p>
-                  <p className={`text-[10px] ${dk('text-gray-600', 'text-gray-400')}`}>{val.prefix}xxx</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Botão pagar */}
-            <button
-              onClick={handlePay}
-              disabled={!phoneInfo?.valid || processing}
-              className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50 ${
-                COLOR_MAP[selectedPlan.color].button
-              }`}>
-              {processing
-                ? <><Loader2 size={16} className="animate-spin"/> A processar…</>
-                : <><CreditCard size={16}/> Pagar {fmtMZN(selectedPlan.price)}</>
+              {isCanceled
+                ? <button onClick={handleReactivate} disabled={actLoad} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${dk('border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20','border-blue-200 bg-blue-50 text-blue-700')}`}>{actLoad?<Loader2 size={13} className="animate-spin"/>:<RefreshCw size={13}/>} Reactivar</button>
+                : isActive && <button onClick={handleCancel} disabled={actLoad} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border ${dk('border-red-500/20 bg-red-500/8 text-red-400 hover:bg-red-500/15','border-red-200 bg-red-50 text-red-600')}`}>Cancelar plano</button>
               }
-            </button>
-
-            <p className={`text-center text-xs mt-3 ${dk('text-gray-600', 'text-gray-400')}`}>
-              Ao pagar, recebes um pedido de confirmação no telemóvel.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════
-          STEP: A PROCESSAR
-      ══════════════════════════════════════════════════════ */}
-      {step === 'processing' && selectedPlan && (
-        <div className={`${card} py-16 text-center`}>
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-orange-500/15', 'bg-orange-50')}`}>
-            <Loader2 size={28} className="text-orange-400 animate-spin"/>
-          </div>
-          <h3 className={`text-lg font-bold mb-2 ${dk('text-white', 'text-gray-900')}`}>A processar o pagamento</h3>
-          <p className={`text-sm ${dk('text-gray-400', 'text-gray-500')}`}>
-            Verifica o teu telemóvel e confirma o pagamento de <strong>{fmtMZN(selectedPlan.price)}</strong>
-          </p>
-          {isSandbox() && (
-            <p className={`text-xs mt-3 ${dk('text-gray-600', 'text-gray-400')}`}>
-              Modo sandbox — a simular confirmação automática…
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════
-          STEP: SUCESSO
-      ══════════════════════════════════════════════════════ */}
-      {step === 'success' && selectedPlan && paymentResult && (
-        <div className={`${card} py-14 px-8 text-center`}>
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-emerald-500/15', 'bg-emerald-50')}`}>
-            <CheckCircle size={28} className="text-emerald-400"/>
-          </div>
-          <h3 className={`text-xl font-bold mb-2 ${dk('text-white', 'text-gray-900')}`}>Plano activado!</h3>
-          <p className={`text-sm mb-6 ${dk('text-gray-400', 'text-gray-500')}`}>
-            O plano <strong>{selectedPlan.name}</strong> foi activado com sucesso via <strong>{paymentResult.provider.toUpperCase()}</strong>.
-          </p>
-
-          {paymentResult.transactionId && (
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono mb-6 ${dk('bg-white/5 text-gray-400', 'bg-gray-100 text-gray-600')}`}>
-              <Clock size={12}/> Ref: {paymentResult.transactionId}
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="flex gap-3 justify-center">
-            <button onClick={() => setStep('plans')}
-              className={`px-5 py-2.5 rounded-xl text-sm font-medium border ${dk('border-white/10 text-gray-300 hover:bg-white/5', 'border-gray-200 text-gray-600 hover:bg-gray-50')}`}>
-              Ver planos
+        {!loadSub && !sub && (
+          <div className={`rounded-2xl border p-6 text-center ${dk('bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border-emerald-500/20','bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200')}`}>
+            <Zap className="text-emerald-400 mx-auto mb-2" size={26}/>
+            <h3 className={`text-xl font-bold mb-1 ${dk('text-white','text-gray-900')}`}>\u2728 7 Dias Gr\u00e1tis!</h3>
+            <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>Cart\u00e3o ou M-Pesa/e-Mola/M-Kesh \u00b7 Cancela quando quiseres</p>
+          </div>
+        )}
+
+        <div>
+          <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${dk('text-gray-500','text-gray-400')}`}>{sub?'Mudar de plano':'Escolhe o teu plano'}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {PLANS.map(plan=>{
+              const c=C[plan.color], isCur=sub?.plan_id===plan.id&&isActive
+              const PIcon=plan.color==='emerald'?Star:plan.color==='blue'?Zap:Building2
+              return (
+                <div key={plan.id} className={`${card} p-5 flex flex-col relative ${plan.badge?`border-2 ${c.border}`:''}`}>
+                  {plan.badge && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black uppercase border bg-[#1a1a1a]"><span className={c.text}>{plan.badge}</span></div>}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${c.icon}`}><PIcon size={17}/></div>
+                  <h4 className={`text-lg font-black mb-0.5 ${dk('text-white','text-gray-900')}`}>{plan.name}</h4>
+                  <p className={`text-xs mb-3 ${dk('text-gray-500','text-gray-400')}`}>{plan.description}</p>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className={`text-2xl font-black ${c.text}`}>{formatMZN(plan.price)}</span>
+                    <span className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span>
+                  </div>
+                  {!sub && <p className={`text-[11px] mb-3 ${dk('text-emerald-400','text-emerald-600')}`}>\u2728 7 dias gr\u00e1tis</p>}
+                  <div className={`flex items-center gap-1.5 mb-3 text-[10px] ${dk('text-gray-600','text-gray-400')}`}>
+                    <Smartphone size={10}/> M-Pesa \u00b7 e-Mola \u00b7 M-Kesh
+                    {plan.stripe_price_id && <><span className="mx-1">\u00b7</span><CreditCard size={10}/> Cart\u00e3o</>}
+                  </div>
+                  <div className={`space-y-1.5 mb-4 text-xs ${dk('bg-white/3','bg-gray-50')} rounded-xl p-3`}>
+                    <div className={`flex items-center gap-1.5 ${dk('text-gray-400','text-gray-600')}`}><Truck size={11}/>{plan.max_deliveries<999_999?`${plan.max_deliveries} entregas/m\u00eas`:'Ilimitadas'}</div>
+                    <div className={`flex items-center gap-1.5 ${dk('text-gray-400','text-gray-600')}`}><Shield size={11}/>Cobertura at\u00e9 {formatMZN(plan.coverage)}</div>
+                  </div>
+                  <ul className="space-y-2 flex-1 mb-5">
+                    {plan.features.map(f=>(
+                      <li key={f} className="flex items-start gap-2">
+                        <CheckCircle size={11} className={`flex-shrink-0 mt-0.5 ${c.text}`}/>
+                        <span className={`text-xs ${dk('text-gray-300','text-gray-700')}`}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {isCur
+                    ? <div className={`w-full py-2.5 rounded-xl text-center text-sm font-semibold ${dk('bg-white/5 text-gray-400','bg-gray-100 text-gray-500')}`}><CheckCircle size={12} className="inline mr-1"/>Plano actual</div>
+                    : <button onClick={()=>handleSelect(plan)} className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] ${c.btn}`}>{sub?'Mudar para este':'Come\u00e7ar agora'} <ChevronRight size={12} className="inline"/></button>
+                  }
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </>)}
+
+      {/* ESCOLHER MÉTODO */}
+      {step==='choose_method' && selPlan && (
+        <div className="space-y-4">
+          <div className={`${card} p-4 flex items-center justify-between`}>
+            <div><p className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>Plano</p><p className={`font-bold ${dk('text-white','text-gray-900')}`}>{selPlan.name}</p></div>
+            <p className={`text-xl font-black ${C[selPlan.color].text}`}>{formatMZN(selPlan.price)}<span className={`text-xs font-normal ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span></p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button onClick={()=>{setPayMethod('card');handleStripeCheckout()}} disabled={stripe.loading} className={`${card} p-5 text-left transition-all hover:border-blue-500/40 disabled:opacity-60 group`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${dk('bg-blue-500/15','bg-blue-50')}`}><CreditCard size={22} className="text-blue-400"/></div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className={`font-bold ${dk('text-white','text-gray-900')}`}>Cart\u00e3o de cr\u00e9dito/d\u00e9bito</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dk('bg-emerald-500/15 text-emerald-400','bg-emerald-100 text-emerald-700')}`}>Autom\u00e1tico</span>
+                  </div>
+                  <p className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>Visa, Mastercard. Activa\u00e7\u00e3o imediata \u2014 sem espera.</p>
+                  <p className={`text-xs mt-2 ${dk('text-blue-400','text-blue-600')}`}>Powered by Stripe \u00b7 Pagamento seguro</p>
+                </div>
+                <ChevronRight size={16} className={`flex-shrink-0 mt-1 ${dk('text-gray-600 group-hover:text-blue-400','text-gray-300 group-hover:text-blue-600')} transition-colors`}/>
+              </div>
             </button>
-            <button onClick={() => navigate('/entrepreneur/overview')}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-black">
-              Ir para o painel <ChevronRight size={14}/>
+            <button onClick={()=>{setPayMethod('mobile');setStep('mobile_instructions')}} className={`${card} p-5 text-left transition-all hover:border-orange-500/30 group`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${dk('bg-orange-500/15','bg-orange-50')}`}><Smartphone size={22} className="text-orange-400"/></div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className={`font-bold ${dk('text-white','text-gray-900')}`}>M-Pesa \u00b7 e-Mola \u00b7 M-Kesh</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dk('bg-orange-500/15 text-orange-400','bg-orange-100 text-orange-700')}`}>At\u00e9 2h</span>
+                  </div>
+                  <p className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>Transfer\u00eancia manual \u2014 envias comprovativo por WhatsApp e activamos em at\u00e9 2 horas.</p>
+                  <p className={`text-xs mt-2 ${dk('text-orange-400','text-orange-600')}`}>Sem conta banc\u00e1ria necess\u00e1ria</p>
+                </div>
+                <ChevronRight size={16} className={`flex-shrink-0 mt-1 ${dk('text-gray-600 group-hover:text-orange-400','text-gray-300 group-hover:text-orange-600')} transition-colors`}/>
+              </div>
             </button>
+          </div>
+          <p className={`text-center text-xs ${dk('text-gray-600','text-gray-400')}`}>Ambos os m\u00e9todos incluem 7 dias gr\u00e1tis</p>
+        </div>
+      )}
+
+      {/* INSTRUÇÕES MÓVEL */}
+      {step==='mobile_instructions' && selPlan && (
+        <div className="space-y-4">
+          <div className={`${card} p-4 flex items-center justify-between`}>
+            <div><p className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>Plano</p><p className={`font-bold ${dk('text-white','text-gray-900')}`}>{selPlan.name}</p></div>
+            <p className={`text-xl font-black ${C[selPlan.color].text}`}>{formatMZN(selPlan.price)}<span className={`text-xs font-normal ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span></p>
+          </div>
+          <div className={`${card} p-5`}>
+            <p className={`text-xs font-bold uppercase tracking-wider mb-4 ${dk('text-gray-400','text-gray-500')}`}>Como activar o teu plano</p>
+            {[
+              { n:'1', title:'Faz a transfer\u00eancia', desc:`Envia ${formatMZN(selPlan.price)} via M-Pesa, e-Mola ou M-Kesh para o n\u00famero ZOMAR.` },
+              { n:'2', title:'Guarda o comprovativo', desc:'Faz screenshot ou anota o c\u00f3digo da transa\u00e7\u00e3o gerado ap\u00f3s a transfer\u00eancia.' },
+              { n:'3', title:'Envia pelo WhatsApp', desc:'Manda o comprovativo para +258 84 XXX XXXX com o teu nome e email da conta ZOMAR.' },
+              { n:'4', title:'Activamos em at\u00e9 2h', desc:'A equipa confirma e activa o plano. Recebes uma notifica\u00e7\u00e3o no app.' },
+            ].map(({n,title,desc})=>(
+              <div key={n} className="flex items-start gap-3 mb-4">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${dk('bg-emerald-500/20 text-emerald-400','bg-emerald-100 text-emerald-700')}`}>{n}</div>
+                <div><p className={`text-sm font-medium ${dk('text-white','text-gray-900')}`}>{title}</p><p className={`text-xs mt-0.5 ${dk('text-gray-400','text-gray-500')}`}>{desc}</p></div>
+              </div>
+            ))}
+            <div className={`rounded-xl p-4 mb-4 ${dk('bg-emerald-500/8 border border-emerald-500/15','bg-emerald-50 border border-emerald-200')}`}>
+              <p className={`text-xs font-bold mb-3 ${dk('text-emerald-400','text-emerald-700')}`}>N\u00fameros para transfer\u00eancia</p>
+              <div className="space-y-2">
+                {[{label:'M-Pesa (Vodacom 84/85)',num:'+258 84 XXX XXXX'},{label:'e-Mola (Movitel 86/87)',num:'+258 86 XXX XXXX'},{label:'M-Kesh (BIM 83)',num:'+258 83 XXX XXXX'}].map(({label,num})=>(
+                  <div key={label} className="flex justify-between items-center">
+                    <span className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>{label}</span>
+                    <span className={`text-sm font-mono font-medium ${dk('text-white','text-gray-900')}`}>{num}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className={`flex items-start gap-2 p-3 rounded-xl text-xs mb-5 ${dk('bg-blue-500/8 border border-blue-500/15 text-blue-300','bg-blue-50 border border-blue-200 text-blue-700')}`}>
+              <Info size={12} className="flex-shrink-0 mt-0.5"/>
+              Ao confirmar, registamos o teu pedido. O plano fica activo ap\u00f3s verifica\u00e7\u00e3o manual pela equipa ZOMAR.
+            </div>
+            <button onClick={handleMobileRequest} className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all ${C[selPlan.color].btn}`}>
+              <CheckCircle size={15}/> J\u00e1 paguei \u2014 confirmar pedido
+            </button>
+            <p className={`text-center text-xs mt-2 ${dk('text-gray-600','text-gray-400')}`}>Activa\u00e7\u00e3o em at\u00e9 2 horas \u00b7 Suporte: zomarentregas@gmail.com</p>
           </div>
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════
-          STEP: ERRO
-      ══════════════════════════════════════════════════════ */}
-      {step === 'error' && (
+      {/* A PROCESSAR */}
+      {step==='processing' && (
+        <div className={`${card} py-16 text-center`}>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-blue-500/15','bg-blue-50')}`}><Loader2 size={28} className="text-blue-400 animate-spin"/></div>
+          <h3 className={`text-lg font-bold mb-2 ${dk('text-white','text-gray-900')}`}>{payMethod==='card'?'A redirecionar para pagamento\u2026':'A registar pedido\u2026'}</h3>
+          <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>{payMethod==='card'?'Ser\u00e1s redirecionado para o Stripe. N\u00e3o feches esta p\u00e1gina.':'A criar a tua subscri\u00e7\u00e3o\u2026'}</p>
+        </div>
+      )}
+
+      {/* SUCESSO */}
+      {step==='success' && selPlan && (
         <div className={`${card} py-14 px-8 text-center`}>
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-red-500/15', 'bg-red-50')}`}>
-            <AlertCircle size={28} className="text-red-400"/>
-          </div>
-          <h3 className={`text-lg font-bold mb-2 ${dk('text-white', 'text-gray-900')}`}>Pagamento não processado</h3>
-          <p className={`text-sm mb-6 ${dk('text-gray-400', 'text-gray-500')}`}>{errorMsg || 'Tenta novamente ou contacta o suporte.'}</p>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-emerald-500/15','bg-emerald-50')}`}><CheckCircle size={28} className="text-emerald-400"/></div>
+          {payMethod==='card'
+            ? <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Plano activado!</h3><p className={`text-sm mb-6 ${dk('text-gray-400','text-gray-500')}`}>O plano <strong>{selPlan.name}</strong> foi activado automaticamente. J\u00e1 podes criar entregas.</p></>
+            : <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Pedido registado!</h3><p className={`text-sm mb-3 ${dk('text-gray-400','text-gray-500')}`}>O pedido do plano <strong>{selPlan.name}</strong> foi registado.</p><div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs mb-6 ${dk('bg-orange-500/10 border border-orange-500/15 text-orange-300','bg-orange-50 border border-orange-200 text-orange-700')}`}><Clock size={11}/> A equipa activa em at\u00e9 2 horas ap\u00f3s confirmar o pagamento</div></>
+          }
           <div className="flex gap-3 justify-center">
-            <button onClick={() => setStep('plans')}
-              className={`px-5 py-2.5 rounded-xl text-sm font-medium border ${dk('border-white/10 text-gray-300 hover:bg-white/5', 'border-gray-200 text-gray-600 hover:bg-gray-50')}`}>
-              Voltar aos planos
-            </button>
-            <button onClick={() => { setStep('payment'); setErrorMsg('') }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-400 text-white">
-              <RefreshCw size={14}/> Tentar novamente
-            </button>
+            <button onClick={()=>setStep('plans')} className={`px-5 py-2.5 rounded-xl text-sm font-medium border ${dk('border-white/10 text-gray-300 hover:bg-white/5','border-gray-200 text-gray-600 hover:bg-gray-50')}`}>Ver planos</button>
+            <button onClick={()=>navigate('/entrepreneur/overview')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-black">Ir para o painel <ChevronRight size={12}/></button>
+          </div>
+        </div>
+      )}
+
+      {/* ERRO */}
+      {step==='error' && (
+        <div className={`${card} py-14 px-8 text-center`}>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-red-500/15','bg-red-50')}`}><AlertCircle size={28} className="text-red-400"/></div>
+          <h3 className={`text-lg font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Algo correu mal</h3>
+          <p className={`text-sm mb-6 ${dk('text-gray-400','text-gray-500')}`}>{errMsg||'Tenta novamente ou contacta o suporte.'}</p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={()=>setStep('plans')} className={`px-5 py-2.5 rounded-xl text-sm font-medium border ${dk('border-white/10 text-gray-300 hover:bg-white/5','border-gray-200 text-gray-600 hover:bg-gray-50')}`}>Voltar</button>
+            <button onClick={()=>{setErrMsg('');setStep(payMethod==='card'?'choose_method':'mobile_instructions')}} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-400 text-white"><RefreshCw size={12}/> Tentar novamente</button>
           </div>
         </div>
       )}

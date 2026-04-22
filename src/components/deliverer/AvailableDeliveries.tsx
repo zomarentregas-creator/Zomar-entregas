@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { notifyEntrepreneur } from '../../lib/Notificationservice'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,9 @@ export default function AvailableDeliveries() {
           metadata:    { old_status: 'accepted', new_status: 'in_progress', deliverer_id: user.id },
         })
       } catch { /* silencioso */ }
+
+      // ── Notificar empreendedor que a entrega foi aceite ───────────────────
+      notifyEntrepreneur(delivery.id, 'delivery_accepted')
 
       // Mostrar modal com instruções do código
       setCodeModal({ delivery, accepted: true })

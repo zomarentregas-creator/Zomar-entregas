@@ -21,8 +21,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-// notifyEntrepreneur e broadcastDeliveryUpdate substituídos por triggers Supabase (SQL)
-// useRealtimeDelivery substituído por postgres_changes nativo
+import { notifyEntrepreneur, notifyDeliverer } from '../../lib/Notificationservice'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -252,6 +251,12 @@ export default function MyDeliveries() {
         })
       } catch { /* silencioso */ }
 
+      // ── Notificar empreendedor sobre mudança de estado ────────────────────
+      if (newStatus === 'in_progress') notifyEntrepreneur(deliveryId, 'delivery_picked_up')
+      if (newStatus === 'completed')   notifyEntrepreneur(deliveryId, 'delivery_completed')
+      if (newStatus === 'problem')     notifyEntrepreneur(deliveryId, 'delivery_problem')
+      if (newStatus === 'cancelled')   notifyEntrepreneur(deliveryId, 'delivery_cancelled')
+
       const labels: Record<string, string> = {
         in_progress: '📦 Item recolhido!',
         completed:   '✅ Entrega concluída!',
@@ -309,7 +314,7 @@ export default function MyDeliveries() {
         setCodeError(data?.error || 'Código incorrecto. Verifique com o empreendedor.')
         return
       }
-      // Sucesso — checkpoint + notificação
+      // Sucesso — checkpoint + notificações
       try {
         await supabase.from('delivery_checkpoints').insert({
           delivery_id: codeModal.deliveryId,
@@ -318,6 +323,11 @@ export default function MyDeliveries() {
           created_at: new Date().toISOString(),
         })
       } catch { /* silencioso */ }
+
+      // Notificar empreendedor e entregador sobre conclusão
+      notifyEntrepreneur(codeModal.deliveryId, 'delivery_completed')
+      notifyDeliverer(codeModal.deliveryId, 'delivery_completed')
+
       setFeedback({ type: 'success', msg: '✅ Entrega concluída com sucesso!' })
       setCodeModal(null)
       setCodeInput('')
