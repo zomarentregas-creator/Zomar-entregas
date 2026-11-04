@@ -277,7 +277,7 @@ export default function Settings() {
       </Section>
 
       {/* ── Acções fixas no fundo ── */}
-      <div className={`fixed bottom-0 left-0 right-0 z-40 flex gap-3 p-4 border-t backdrop-blur-lg ${
+      <div className={`fixed bottom-[calc(3.9rem+env(safe-area-inset-bottom))] lg:bottom-0 left-0 right-0 lg:left-60 z-20 flex gap-3 p-3 sm:p-4 border-t backdrop-blur-lg ${
         dk('bg-[#121212]/90 border-white/5', 'bg-white/90 border-gray-200')
       }`}>
         <div className="max-w-4xl mx-auto w-full flex gap-3">

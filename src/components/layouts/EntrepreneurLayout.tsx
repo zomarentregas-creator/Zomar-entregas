@@ -339,7 +339,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
 
       {/* ══ BOTTOM NAV (mobile) ══ */}
       <nav aria-label="Navegação principal"
-        className={`lg:hidden fixed bottom-0 inset-x-0 z-40 border-t backdrop-blur-xl pb-[env(safe-area-inset-bottom)] ${dk('bg-[#0a0f12]/95 border-white/[0.07]', 'bg-white/95 border-gray-200')}`}>
+        className={`lg:hidden fixed bottom-0 inset-x-0 z-30 border-t backdrop-blur-xl pb-[env(safe-area-inset-bottom)] ${dk('bg-[#0a0f12]/95 border-white/[0.07]', 'bg-white/95 border-gray-200')}`}>
         <div className="grid grid-cols-4 max-w-md mx-auto">
           {bottomTabs.map(({ label, icon: Icon, to, match }) => {
             const active = match.some(m => location.pathname.startsWith(m));

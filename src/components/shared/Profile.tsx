@@ -86,7 +86,7 @@ function buildCSS(dark: boolean): string {
   }
 
   .dp * { box-sizing:border-box; font-family:var(--font); }
-  .dp { background:var(--bg); min-height:100vh; color:var(--text); padding:18px; transition:background .25s,color .25s; }
+  .dp { background:var(--bg); min-height:60vh; color:var(--text); padding:18px; transition:background .25s,color .25s; }
   .dp ::-webkit-scrollbar { width:4px; }
   .dp ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
 
