@@ -112,7 +112,7 @@ export default function Overview() {
       const current = list.find(d => ACTIVE.includes(d.current_status))
       if (current?.deliverer_id) {
         const { data: p } = await supabase
-          .from('profiles').select('full_name, phone').eq('id', current.deliverer_id).maybeSingle()
+          .from('profiles').select('full_name, phone').eq('user_id', current.deliverer_id).maybeSingle()
         setCourier({ name: p?.full_name || 'Estafeta', phone: p?.phone || undefined })
       } else {
         setCourier(null)

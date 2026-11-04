@@ -90,6 +90,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
     { path: '/deliverer/help',          icon: <HelpCircle size={17}/>, label: 'Ajuda',         tip: 'Centro de ajuda' },
   ];
 
+  const isHome = location.pathname === '/deliverer/dashboard' || location.pathname === '/deliverer';
   const bottomTabs = [
     { label: 'Início',      icon: Home,    to: '/deliverer/dashboard',
       match: ['/deliverer/dashboard'] },
@@ -201,7 +202,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
       {/* ══ MAIN ══ */}
       <div className="lg:pl-60">
 
-        <header className={`sticky top-0 z-40 backdrop-blur-xl border-b pt-[env(safe-area-inset-top)] ${dk('bg-black/50 border-white/5', 'bg-white/95 border-gray-200')}`}>
+        <header className={`sticky top-0 z-40 backdrop-blur-xl border-b pt-[env(safe-area-inset-top)] ${isHome ? 'hidden lg:block ' : ''}${dk('bg-black/50 border-white/5', 'bg-white/95 border-gray-200')}`}>
           <div className="px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-white/5 flex-shrink-0">
@@ -309,7 +310,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        <main className="px-4 sm:px-6 pt-4 lg:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">{children}</main>
+        <main className={`px-4 sm:px-6 lg:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6 ${isHome ? 'pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-6' : 'pt-4'}`}>{children}</main>
 
         <footer className={`hidden lg:block px-4 sm:px-6 py-4 border-t text-xs ${dk('border-white/5 bg-black/20', 'border-gray-200')}`}>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
