@@ -14,9 +14,11 @@ const GMAIL_URL = `https://mail.google.com/mail/?view=cm&fs=1&to=zomarentregas%4
 interface Props {
   isDarkMode: boolean
   quickQuestions?: string[]
+  /** Sobe o botão no mobile para não tapar a barra de navegação inferior */
+  raiseOnMobile?: boolean
 }
 
-export default function SupportButton({ isDarkMode, quickQuestions }: Props) {
+export default function SupportButton({ isDarkMode, quickQuestions, raiseOnMobile }: Props) {
   const { user } = useAuth() as any
   const [open,    setOpen]    = useState(false)
   const [view,    setView]    = useState<'menu' | 'chat'>('menu')
@@ -76,7 +78,7 @@ export default function SupportButton({ isDarkMode, quickQuestions }: Props) {
   const openEmail = () => window.open(GMAIL_URL, '_blank', 'noopener,noreferrer')
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3">
+    <div className={`fixed right-4 sm:right-6 z-50 flex flex-col items-end gap-3 ${raiseOnMobile ? 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6' : 'bottom-4 sm:bottom-6'}`}>
 
       {/* Painel principal */}
       {open && !mini && (

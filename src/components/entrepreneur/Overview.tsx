@@ -1,369 +1,412 @@
 /**
  * ============================================================================
- * OVERVIEW - VISÃO GERAL DO EMPREENDEDOR
+ * OVERVIEW — INÍCIO DO CLIENTE / EMPREENDEDOR
  * ============================================================================
- * @version 4.1 — moeda MZN, responsividade mobile melhorada
+ * @version 5.0 — mobile-first, inspirado no design "Cliente › Início"
+ *  - Saudação + créditos + CTA "Pedir entrega"
+ *  - Cartão "Entrega em curso" (progresso, estafeta, ligar, mapa, código)
+ *  - Atalhos rápidos (Créditos, Histórico, Ajuda)
+ *  - Resumo e entregas recentes (coluna lateral em ecrãs largos)
  */
 
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Package, CheckCircle, Clock, AlertTriangle,
-  DollarSign, TrendingUp, Truck, RefreshCw, Loader2,
-  PlusCircle, ChevronRight, MapPin
+  ArrowRight, Phone, MapPin, Wallet, Clock, HelpCircle, Plus, Bell, Menu,
+  Package, CheckCircle, AlertTriangle, Truck, ChevronRight, Eye, EyeOff,
+  Loader2, RefreshCw,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useNotifications } from '../../hooks/useNotifications'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
-interface Stats {
-  totalDeliveries: number
-  pendingDeliveries: number
-  completedDeliveries: number
-  problemDeliveries: number
-  totalValue: number
-}
-
-interface RecentDelivery {
+interface DeliveryRow {
   id: string
   item_type: string
   destination_address: string
   current_status: string
   estimated_value: number
   created_at: string
-  updated_at: string
+  deliverer_id: string | null
 }
 
-interface ComputedMetrics {
-  successRate: number
-  avgDeliveryTimeHours: number | null
-  activeDeliverers: number
+interface Courier { name: string; phone?: string }
+
+interface Credits { remaining: number; unlimited: boolean; planName?: string }
+
+// ─── Configuração de estados ──────────────────────────────────────────────────
+
+const ACTIVE = ['created', 'accepted', 'in_progress', 'picked_up']
+
+/** step = nº de segmentos preenchidos (de 4) */
+const ACTIVE_STEPS: Record<string, { label: string; hint: string; step: number }> = {
+  created:     { label: 'A procurar', hint: 'À procura de um estafeta',      step: 1 },
+  accepted:    { label: 'Aceite',     hint: 'Estafeta a caminho da recolha', step: 2 },
+  in_progress: { label: 'Em curso',   hint: 'Estafeta em andamento',         step: 3 },
+  picked_up:   { label: 'A caminho',  hint: 'A caminho do destino',          step: 3 },
 }
-
-// ─── Helper de moeda ─────────────────────────────────────────────────────────
-
-const fmtMZN = (v: number) =>
-  new Intl.NumberFormat('pt-MZ', {
-    style: 'currency',
-    currency: 'MZN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(v)
-
-// ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  completed:   { label: 'Entregue',     color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-  in_progress: { label: 'Em Andamento', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-  accepted:    { label: 'Aceita',       color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+  completed:   { label: 'Entregue',     color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+  in_progress: { label: 'Em andamento', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  picked_up:   { label: 'A caminho',    color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+  accepted:    { label: 'Aceite',       color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' },
   created:     { label: 'Disponível',   color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
   problem:     { label: 'Problema',     color: 'bg-red-500/10 text-red-400 border-red-500/20' },
   cancelled:   { label: 'Cancelado',    color: 'bg-red-500/10 text-red-400 border-red-500/20' },
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const fmtMZN = (v: number) =>
+  new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v)
+
+const fmtDate = (d: string) =>
+  new Date(d).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'short' })
+
+// ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function Overview() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { unreadCount } = useNotifications(user?.id)
 
-  const [isDarkMode, setIsDarkMode] = useState(() =>
-    localStorage.getItem('entrepreneur_theme') !== 'light'
-  )
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('entrepreneur_theme') !== 'light')
   useEffect(() => {
     const h = () => setIsDarkMode(localStorage.getItem('entrepreneur_theme') !== 'light')
     window.addEventListener('storage', h)
     return () => window.removeEventListener('storage', h)
   }, [])
+  const dk = (d: string, l: string) => (isDarkMode ? d : l)
 
-  const [stats, setStats] = useState<Stats>({
-    totalDeliveries: 0, pendingDeliveries: 0,
-    completedDeliveries: 0, problemDeliveries: 0, totalValue: 0,
-  })
-  const [metrics, setMetrics] = useState<ComputedMetrics>({
-    successRate: 0, avgDeliveryTimeHours: null, activeDeliverers: 0,
-  })
-  const [recentDeliveries, setRecentDeliveries] = useState<RecentDelivery[]>([])
+  const [deliveries, setDeliveries] = useState<DeliveryRow[]>([])
+  const [courier, setCourier] = useState<Courier | null>(null)
+  const [credits, setCredits] = useState<Credits | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ─── Load ──────────────────────────────────────────────────────────────────
+  // código de confirmação (só carregado a pedido, via RPC segura)
+  const [code, setCode] = useState<string | null>(null)
+  const [codeVisible, setCodeVisible] = useState(false)
+  const [codeLoading, setCodeLoading] = useState(false)
+
+  const active = deliveries.find(d => ACTIVE.includes(d.current_status)) ?? null
+
+  // ─── Carregar dados ─────────────────────────────────────────────────────────
 
   const loadData = useCallback(async () => {
     if (!user?.id) return
     try {
-      setLoading(true); setError(null)
+      setError(null)
 
-      const { data: deliveries, error: dErr } = await supabase
+      const { data, error: dErr } = await supabase
         .from('deliveries')
-        .select('id, item_type, destination_address, current_status, estimated_value, created_at, updated_at')
+        .select('id, item_type, destination_address, current_status, estimated_value, created_at, deliverer_id')
         .eq('entrepreneur_id', user.id)
         .order('created_at', { ascending: false })
       if (dErr) throw dErr
+      const list = (data || []) as DeliveryRow[]
+      setDeliveries(list)
 
-      const all        = deliveries || []
-      const completed  = all.filter(d => d.current_status === 'completed')
-      const pending    = all.filter(d => ['created', 'accepted', 'in_progress'].includes(d.current_status))
-      const problems   = all.filter(d => d.current_status === 'problem')
-      const totalValue = all.reduce((s, d) => s + (d.estimated_value || 0), 0)
-
-      setStats({ totalDeliveries: all.length, pendingDeliveries: pending.length,
-        completedDeliveries: completed.length, problemDeliveries: problems.length, totalValue })
-
-      const successRate = all.length > 0 ? Math.round((completed.length / all.length) * 100) : 0
-
-      let avgDeliveryTimeHours: number | null = null
-      if (completed.length > 0) {
-        const durations = completed.map(d => {
-          const s = new Date(d.created_at).getTime()
-          const e = new Date(d.updated_at).getTime()
-          return (e - s) / (1000 * 60 * 60)
-        }).filter(h => h > 0)
-        if (durations.length > 0)
-          avgDeliveryTimeHours = durations.reduce((a, b) => a + b, 0) / durations.length
+      // estafeta da entrega em curso
+      const current = list.find(d => ACTIVE.includes(d.current_status))
+      if (current?.deliverer_id) {
+        const { data: p } = await supabase
+          .from('profiles').select('full_name, phone').eq('id', current.deliverer_id).maybeSingle()
+        setCourier({ name: p?.full_name || 'Estafeta', phone: p?.phone || undefined })
+      } else {
+        setCourier(null)
       }
 
-      const { data: activeDels } = await supabase
-        .from('deliveries').select('deliverer_id')
-        .in('current_status', ['accepted', 'in_progress'])
-        .not('deliverer_id', 'is', null)
-      const activeDeliverers = new Set((activeDels || []).map((d: any) => d.deliverer_id)).size
-
-      setMetrics({ successRate, avgDeliveryTimeHours, activeDeliverers })
-      setRecentDeliveries(all.slice(0, 5))
+      // créditos (entregas restantes do plano)
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('plan_name, max_deliveries, current_usage')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (sub) {
+        const max = sub.max_deliveries ?? 0
+        setCredits({
+          remaining: Math.max(0, max - (sub.current_usage ?? 0)),
+          unlimited: max >= 999999,
+          planName: sub.plan_name,
+        })
+      } else {
+        setCredits(null)
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados')
-    } finally { setLoading(false) }
-  }, [user])
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id])
 
   useEffect(() => { loadData() }, [loadData])
 
   useEffect(() => {
     if (!user?.id) return
     const ch = supabase.channel('overview-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries',
-        filter: `entrepreneur_id=eq.${user.id}` }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `entrepreneur_id=eq.${user.id}` }, () => loadData())
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [user?.id, loadData])
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  // esconder código quando muda a entrega em curso
+  useEffect(() => { setCode(null); setCodeVisible(false) }, [active?.id])
 
-  const dk = (dark: string, light: string) => isDarkMode ? dark : light
-
-  const formatAvgTime = (h: number | null) => {
-    if (!h) return '—'
-    if (h < 1)  return `${Math.round(h * 60)}min`
-    if (h < 24) return `${h.toFixed(1)}h`
-    return `${(h / 24).toFixed(1)}d`
+  const toggleCode = async () => {
+    if (!active) return
+    if (codeVisible) { setCodeVisible(false); return }
+    if (code) { setCodeVisible(true); return }
+    setCodeLoading(true)
+    try {
+      const { data, error: e } = await supabase.rpc('get_delivery_code', { p_delivery_id: active.id })
+      if (e) throw e
+      if (data?.success && data.code) { setCode(String(data.code)); setCodeVisible(true) }
+    } catch { /* silencioso */ }
+    finally { setCodeLoading(false) }
   }
 
-  const getStatus = (s: string) =>
-    STATUS_CONFIG[s] ?? { label: s, color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' }
+  // ─── Derivados ──────────────────────────────────────────────────────────────
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'short' })
+  const firstName = (user?.full_name || '').trim().split(' ')[0] || 'Cliente'
+  const stats = {
+    total: deliveries.length,
+    done: deliveries.filter(d => d.current_status === 'completed').length,
+    ongoing: deliveries.filter(d => ACTIVE.includes(d.current_status)).length,
+    problems: deliveries.filter(d => d.current_status === 'problem').length,
+  }
+  const recent = deliveries.slice(0, 4)
+  const stepInfo = active ? (ACTIVE_STEPS[active.current_status] ?? ACTIVE_STEPS.created) : null
+  const codeChars = codeVisible && code ? code.split('') : Array(4).fill('–')
+  const mapsUrl = active
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(active.destination_address)}`
+    : '#'
 
-  // ─── Loading / Error ───────────────────────────────────────────────────────
+  const creditsLabel = credits ? (credits.unlimited ? 'Ilimitados' : `${credits.remaining} créditos`) : 'Sem plano'
+
+  // ─── Classes reutilizáveis ──────────────────────────────────────────────────
+
+  const card = `rounded-2xl border ${dk('bg-[#111a1f] border-white/[0.07]', 'bg-white border-gray-200 shadow-sm')}`
+  const subtle = dk('text-gray-400', 'text-gray-500')
+  const strong = dk('text-white', 'text-gray-900')
+
+  // ─── Estados de carregamento / erro ─────────────────────────────────────────
 
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className={`mx-auto animate-spin mb-4 ${dk('text-emerald-400','text-emerald-600')}`} size={40}/>
-        <p className={`text-sm ${dk('text-gray-400','text-gray-600')}`}>A carregar visão geral...</p>
-      </div>
+      <Loader2 className={`animate-spin ${dk('text-emerald-400', 'text-emerald-600')}`} size={36} />
     </div>
   )
 
   if (error) return (
-    <div className={`rounded-2xl border p-8 text-center ${dk('bg-[#121212] border-red-500/20','bg-white border-red-200')}`}>
-      <AlertTriangle className={`mx-auto mb-4 ${dk('text-red-400','text-red-600')}`} size={40}/>
-      <p className={`font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Erro ao carregar</p>
-      <p className={`text-sm mb-4 ${dk('text-gray-400','text-gray-600')}`}>{error}</p>
+    <div className={`${card} max-w-md mx-auto p-8 text-center`}>
+      <AlertTriangle className="mx-auto mb-3 text-red-400" size={36} />
+      <p className={`font-bold mb-1 ${strong}`}>Erro ao carregar</p>
+      <p className={`text-sm mb-4 ${subtle}`}>{error}</p>
       <button onClick={loadData}
-        className={`flex items-center gap-2 mx-auto px-5 py-2.5 rounded-xl font-medium text-sm ${dk('bg-emerald-500 text-black','bg-emerald-600 text-white')}`}>
-        <RefreshCw size={16}/> Tentar novamente
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-500 text-black hover:bg-emerald-400">
+        <RefreshCw size={15} /> Tentar novamente
       </button>
     </div>
   )
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="mx-auto w-full max-w-5xl lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-6 lg:items-start">
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className={`text-xl sm:text-2xl font-bold ${dk('text-white','text-gray-900')}`}>Visão Geral</h2>
-          <p className={`text-xs sm:text-sm mt-1 flex items-center gap-1.5 ${dk('text-gray-500','text-gray-600')}`}>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"/>
-            Atualizado em tempo real
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={loadData}
-            className={`p-2 sm:p-2.5 rounded-xl ${dk('bg-white/5 hover:bg-white/10 text-gray-400','bg-gray-100 hover:bg-gray-200 text-gray-600')}`}>
-            <RefreshCw size={15}/>
-          </button>
-          <button onClick={() => navigate('/entrepreneur/new-delivery')}
-            className={`flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap ${dk('bg-emerald-500 text-black hover:bg-emerald-400','bg-emerald-600 text-white hover:bg-emerald-700')}`}>
-            <PlusCircle size={14}/>
-            <span>Nova Entrega</span>
-          </button>
-        </div>
-      </div>
+      {/* ═════════ Coluna principal ═════════ */}
+      <div className="space-y-4 min-w-0">
 
-      {/* Stats Cards — 2 colunas mobile, 4 desktop */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: 'Total',        value: stats.totalDeliveries,     icon: Package,      border: dk('border-emerald-500/20','border-emerald-200'), iconColor: dk('text-emerald-400','text-emerald-600'), iconBg: dk('bg-emerald-500/10','bg-emerald-100'), labelColor: dk('text-emerald-400','text-emerald-600') },
-          { label: 'Concluídas',   value: stats.completedDeliveries, icon: CheckCircle,  border: dk('border-green-500/20','border-green-200'),     iconColor: dk('text-green-400','text-green-600'),     iconBg: dk('bg-green-500/10','bg-green-100'),     labelColor: dk('text-green-400','text-green-600') },
-          { label: 'Em Andamento', value: stats.pendingDeliveries,   icon: Clock,        border: dk('border-yellow-500/20','border-yellow-200'),   iconColor: dk('text-yellow-400','text-yellow-600'),   iconBg: dk('bg-yellow-500/10','bg-yellow-100'),   labelColor: dk('text-yellow-400','text-yellow-600') },
-          { label: 'Problemas',    value: stats.problemDeliveries,   icon: AlertTriangle,border: dk('border-red-500/20','border-red-200'),         iconColor: dk('text-red-400','text-red-600'),         iconBg: dk('bg-red-500/10','bg-red-100'),         labelColor: dk('text-red-400','text-red-600') },
-        ].map(({ label, value, icon: Icon, border, iconColor, iconBg, labelColor }) => (
-          <div key={label}
-            className={`p-4 sm:p-5 rounded-2xl border transition-all hover:scale-[1.02] ${dk('bg-[#121212]','bg-white shadow-sm')} ${border}`}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className={`text-[10px] sm:text-xs font-medium truncate ${labelColor}`}>{label}</p>
-                <p className={`text-2xl sm:text-3xl font-bold mt-1.5 sm:mt-2 ${dk('text-white','text-gray-900')}`}>{value}</p>
-              </div>
-              <div className={`p-2 sm:p-3 rounded-xl flex-shrink-0 ${iconBg}`}>
-                <Icon className={iconColor} size={18}/>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Valor Total */}
-      <div className={`p-5 sm:p-6 rounded-2xl border ${dk('bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20','bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 shadow-sm')}`}>
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className={`text-sm font-medium ${dk('text-purple-400','text-purple-600')}`}>Valor Total das Entregas</p>
-            <p className={`text-2xl sm:text-4xl font-bold mt-2 ${dk('text-white','text-gray-900')}`}>
-              {fmtMZN(stats.totalValue)}
-            </p>
-            <p className={`text-xs sm:text-sm mt-1.5 sm:mt-2 ${dk('text-gray-500','text-gray-600')}`}>
-              Valor agregado de todas as suas entregas
-            </p>
-          </div>
-          <div className={`p-3 sm:p-4 rounded-xl flex-shrink-0 ${dk('bg-gradient-to-r from-purple-500/20 to-pink-500/20','bg-gradient-to-r from-purple-100 to-pink-100')}`}>
-            <DollarSign className={dk('text-purple-400','text-purple-600')} size={28}/>
-          </div>
-        </div>
-      </div>
-
-      {/* Métricas — 1 coluna mobile, 3 desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-
-        <div className={`p-4 sm:p-5 rounded-2xl border ${dk('bg-[#121212] border-white/5','bg-white border-gray-200 shadow-sm')}`}>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <p className={`text-xs sm:text-sm font-medium ${dk('text-gray-400','text-gray-600')}`}>Taxa de Sucesso</p>
-              <TrendingUp className={dk('text-emerald-400','text-emerald-600')} size={15}/>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className={`flex-1 h-2 rounded-full overflow-hidden ${dk('bg-gray-800','bg-gray-200')}`}>
-                <div className={`h-full rounded-full transition-all duration-700 ${
-                  metrics.successRate >= 80 ? 'bg-emerald-500'
-                  : metrics.successRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                }`} style={{ width: `${metrics.successRate}%` }}/>
-              </div>
-              <span className={`text-sm font-bold ${dk('text-white','text-gray-900')}`}>{metrics.successRate}%</span>
-            </div>
-            <p className={`text-xs ${dk('text-gray-600','text-gray-400')}`}>
-              {stats.completedDeliveries} de {stats.totalDeliveries} entrega{stats.totalDeliveries !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-
-        <div className={`p-4 sm:p-5 rounded-2xl border ${dk('bg-[#121212] border-white/5','bg-white border-gray-200 shadow-sm')}`}>
-          <div className="space-y-1.5">
-            <p className={`text-xs sm:text-sm font-medium ${dk('text-gray-400','text-gray-600')}`}>Tempo Médio</p>
-            <p className={`text-xl sm:text-2xl font-bold ${dk('text-white','text-gray-900')}`}>
-              {formatAvgTime(metrics.avgDeliveryTimeHours)}
-            </p>
-            <p className={`text-xs ${dk('text-gray-500','text-gray-600')}`}>
-              {metrics.avgDeliveryTimeHours !== null
-                ? `Com base em ${stats.completedDeliveries} entrega${stats.completedDeliveries !== 1 ? 's' : ''}`
-                : 'Sem dados ainda'}
-            </p>
-          </div>
-        </div>
-
-        <div className={`p-4 sm:p-5 rounded-2xl border ${dk('bg-[#121212] border-white/5','bg-white border-gray-200 shadow-sm')}`}>
-          <div className="space-y-1.5">
-            <p className={`text-xs sm:text-sm font-medium ${dk('text-gray-400','text-gray-600')}`}>Entregadores Ativos</p>
-            <div className="flex items-end gap-2">
-              <p className={`text-xl sm:text-2xl font-bold ${dk('text-white','text-gray-900')}`}>{metrics.activeDeliverers}</p>
-              {metrics.activeDeliverers > 0 && (
-                <span className="mb-0.5 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">em rota</span>
-              )}
-            </div>
-            <p className={`text-xs ${dk('text-gray-500','text-gray-600')}`}>
-              {metrics.activeDeliverers === 0 ? 'Nenhum em rota agora' : `${metrics.activeDeliverers} em andamento`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Entregas Recentes */}
-      <div className={`rounded-2xl border overflow-hidden ${dk('bg-[#121212] border-white/5','bg-white border-gray-200 shadow-sm')}`}>
-        <div className={`p-4 sm:p-5 border-b flex items-center justify-between ${dk('border-white/5','border-gray-200')}`}>
-          <h3 className={`font-bold text-base sm:text-lg ${dk('text-white','text-gray-900')}`}>Entregas Recentes</h3>
-          <button onClick={() => navigate('/entrepreneur/active-deliveries')}
-            className={`text-xs sm:text-sm flex items-center gap-1 ${dk('text-emerald-400 hover:text-emerald-300','text-emerald-600 hover:text-emerald-700')}`}>
-            Ver todas <ChevronRight size={13}/>
-          </button>
-        </div>
-
-        {recentDeliveries.length === 0 ? (
-          <div className="p-10 sm:p-12 text-center">
-            <Package className={`mx-auto mb-4 ${dk('text-gray-600','text-gray-300')}`} size={40}/>
-            <p className={`font-medium mb-4 ${dk('text-gray-400','text-gray-600')}`}>Nenhuma entrega ainda</p>
-            <button onClick={() => navigate('/entrepreneur/new-delivery')}
-              className={`px-6 py-2.5 rounded-xl font-medium text-sm ${dk('bg-emerald-500 text-black','bg-emerald-600 text-white')}`}>
-              Criar primeira entrega
+        {/* Topo: saudação + créditos */}
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <p className={`text-sm pt-2 truncate ${subtle}`}>Olá, {firstName}</p>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => navigate('/entrepreneur/notifications')} aria-label="Notificações"
+              className={`relative w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${dk('bg-[#111a1f] border-white/10 text-gray-300 hover:bg-white/10', 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')}`}>
+              <Bell size={17} />
+              {unreadCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-orange-500" />}
+            </button>
+            <button onClick={() => window.dispatchEvent(new CustomEvent('zomar:open-menu'))} aria-label="Menu"
+              className={`lg:hidden w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${dk('bg-[#111a1f] border-white/10 text-gray-300 hover:bg-white/10', 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')}`}>
+              <Menu size={17} />
+            </button>
+            <button onClick={() => navigate('/entrepreneur/subscription')}
+              className={`h-10 pl-3 pr-4 rounded-full border flex items-center gap-1.5 text-sm font-bold transition-colors ${dk('bg-[#111a1f] border-white/10 text-white hover:bg-white/10', 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50')}`}>
+              <Plus size={15} className="text-emerald-500" />
+              <span className="whitespace-nowrap">{creditsLabel}</span>
             </button>
           </div>
+        </div>
+
+        <h1 className={`text-[1.75rem] sm:text-4xl font-extrabold leading-[1.15] tracking-tight max-w-md ${strong}`}>
+          Que entrega precisas hoje?
+        </h1>
+
+        {/* CTA */}
+        <button onClick={() => navigate('/entrepreneur/new-delivery')}
+          className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-black font-bold text-base flex items-center justify-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)] transition-all">
+          Pedir entrega <ArrowRight size={18} />
+        </button>
+
+        {/* Entrega em curso */}
+        {active && stepInfo ? (
+          <section className={`${card} p-4 sm:p-5 space-y-4`}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className={`text-sm ${subtle}`}>Entrega em curso</h2>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
+                {stepInfo.label}
+              </span>
+            </div>
+
+            {/* Progresso */}
+            <div className="grid grid-cols-4 gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={4} aria-valuenow={stepInfo.step}>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className={`h-1.5 rounded-full transition-colors duration-500 ${i <= stepInfo.step ? 'bg-emerald-500' : dk('bg-white/10', 'bg-gray-200')}`} />
+              ))}
+            </div>
+
+            {/* Estafeta */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center font-bold ${dk('bg-white/10 text-gray-200', 'bg-gray-100 text-gray-700')}`}>
+                {courier ? courier.name.charAt(0).toUpperCase() : <Truck size={18} className={subtle} />}
+              </div>
+              <div className="min-w-0">
+                <p className={`font-bold truncate ${strong}`}>{courier?.name ?? 'Estafeta por atribuir'}</p>
+                <p className={`text-sm truncate ${subtle}`}>{stepInfo.hint}</p>
+              </div>
+            </div>
+
+            {/* Ações */}
+            <div className="grid grid-cols-2 gap-3">
+              {courier?.phone ? (
+                <a href={`tel:${courier.phone}`}
+                  className={`h-12 rounded-xl border flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${dk('border-white/15 text-white hover:bg-white/5', 'border-gray-300 text-gray-800 hover:bg-gray-50')}`}>
+                  <Phone size={16} /> Ligar
+                </a>
+              ) : (
+                <button disabled
+                  className={`h-12 rounded-xl border flex items-center justify-center gap-2 text-sm font-semibold opacity-40 cursor-not-allowed ${dk('border-white/15 text-white', 'border-gray-300 text-gray-800')}`}>
+                  <Phone size={16} /> Ligar
+                </button>
+              )}
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                className={`h-12 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${dk('bg-white/[0.07] text-white hover:bg-white/10', 'bg-gray-100 text-gray-800 hover:bg-gray-200')}`}>
+                <MapPin size={16} /> Ver mapa
+              </a>
+            </div>
+
+            {/* Código de entrega */}
+            <div className={`pt-4 border-t space-y-3 ${dk('border-white/[0.07]', 'border-gray-200')}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className={`text-sm ${subtle}`}>Código de entrega</p>
+                <button onClick={toggleCode} disabled={codeLoading}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-emerald-500 hover:text-emerald-400 disabled:opacity-50">
+                  {codeLoading ? <Loader2 size={13} className="animate-spin" /> : codeVisible ? <EyeOff size={13} /> : <Eye size={13} />}
+                  {codeVisible ? 'Esconder' : 'Mostrar'}
+                </button>
+              </div>
+              <div className="flex gap-2 sm:gap-3">
+                {codeChars.map((c, i) => (
+                  <div key={i}
+                    className={`flex-1 min-w-0 h-14 sm:h-16 rounded-xl border flex items-center justify-center text-2xl font-bold font-mono ${dk('bg-black/40 border-white/[0.07]', 'bg-gray-50 border-gray-200')} ${codeVisible && code ? strong : subtle}`}>
+                    {c}
+                  </div>
+                ))}
+              </div>
+              <p className={`text-xs ${subtle}`}>Diz este código ao estafeta quando receberes.</p>
+            </div>
+          </section>
         ) : (
-          <div className={`divide-y ${dk('divide-white/5','divide-gray-100')}`}>
-            {recentDeliveries.map(d => {
-              const s = getStatus(d.current_status)
-              return (
-                <div key={d.id}
-                  onClick={() => navigate(`/entrepreneur/delivery/${d.id}`)}
-                  className={`p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${dk('hover:bg-white/5','hover:bg-gray-50')}`}>
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`p-2 sm:p-2.5 rounded-xl flex-shrink-0 ${dk('bg-emerald-500/10','bg-emerald-100')}`}>
-                      <Truck className={dk('text-emerald-400','text-emerald-600')} size={16}/>
-                    </div>
-                    <div className="min-w-0">
-                      <p className={`font-bold text-sm truncate ${dk('text-white','text-gray-900')}`}>{d.item_type}</p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <MapPin size={10} className={dk('text-gray-500','text-gray-400')}/>
-                        <p className={`text-xs truncate ${dk('text-gray-500','text-gray-500')}`}>{d.destination_address}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full border ${s.color}`}>{s.label}</span>
-                        <span className={`text-[10px] sm:text-xs ${dk('text-gray-600','text-gray-400')}`}>{formatDate(d.created_at)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <p className={`text-sm font-bold ${dk('text-emerald-400','text-emerald-600')}`}>{fmtMZN(d.estimated_value)}</p>
-                    <ChevronRight className={dk('text-gray-600','text-gray-400')} size={14}/>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <section className={`${card} p-6 text-center`}>
+            <div className={`mx-auto mb-3 w-12 h-12 rounded-full flex items-center justify-center ${dk('bg-white/5', 'bg-gray-100')}`}>
+              <Package size={22} className={subtle} />
+            </div>
+            <p className={`font-bold ${strong}`}>Sem entregas em curso</p>
+            <p className={`text-sm mt-1 ${subtle}`}>Quando pedires uma entrega, acompanhas tudo aqui.</p>
+          </section>
         )}
       </div>
 
+      {/* ═════════ Coluna lateral ═════════ */}
+      <div className="space-y-4 mt-4 lg:mt-0 min-w-0">
+
+        {/* Atalhos */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Créditos', icon: Wallet,     to: '/entrepreneur/subscription' },
+            { label: 'Histórico', icon: Clock,      to: '/entrepreneur/delivery-history' },
+            { label: 'Ajuda',    icon: HelpCircle, to: '/entrepreneur/help' },
+          ].map(({ label, icon: Icon, to }) => (
+            <button key={label} onClick={() => navigate(to)}
+              className={`${card} h-20 sm:h-24 flex flex-col items-center justify-center gap-2 text-sm font-semibold transition-colors ${dk('text-white hover:bg-white/5', 'text-gray-800 hover:bg-gray-50')}`}>
+              <Icon size={20} className="text-emerald-500" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Resumo */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Total',        value: stats.total,    icon: Package,       tone: 'text-emerald-500' },
+            { label: 'Concluídas',   value: stats.done,     icon: CheckCircle,   tone: 'text-green-500' },
+            { label: 'Em andamento', value: stats.ongoing,  icon: Clock,         tone: 'text-yellow-500' },
+            { label: 'Problemas',    value: stats.problems, icon: AlertTriangle, tone: 'text-red-400' },
+          ].map(({ label, value, icon: Icon, tone }) => (
+            <div key={label} className={`${card} p-4 flex items-center justify-between gap-2`}>
+              <div className="min-w-0">
+                <p className={`text-xs truncate ${subtle}`}>{label}</p>
+                <p className={`text-2xl font-bold mt-0.5 ${strong}`}>{value}</p>
+              </div>
+              <Icon size={20} className={`flex-shrink-0 ${tone}`} />
+            </div>
+          ))}
+        </div>
+
+        {/* Recentes */}
+        <section className={`${card} overflow-hidden`}>
+          <div className={`px-4 py-3 flex items-center justify-between border-b ${dk('border-white/[0.07]', 'border-gray-200')}`}>
+            <h2 className={`font-bold text-sm ${strong}`}>Entregas recentes</h2>
+            <button onClick={() => navigate('/entrepreneur/delivery-history')}
+              className="text-xs font-semibold text-emerald-500 hover:text-emerald-400 flex items-center gap-0.5">
+              Ver todas <ChevronRight size={13} />
+            </button>
+          </div>
+          {recent.length === 0 ? (
+            <p className={`p-6 text-center text-sm ${subtle}`}>Nenhuma entrega ainda</p>
+          ) : (
+            <ul className={`divide-y ${dk('divide-white/[0.06]', 'divide-gray-100')}`}>
+              {recent.map(d => {
+                const s = STATUS_CONFIG[d.current_status] ?? { label: d.current_status, color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' }
+                return (
+                  <li key={d.id}>
+                    <button onClick={() => navigate(`/entrepreneur/delivery/${d.id}`)}
+                      className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors ${dk('hover:bg-white/5', 'hover:bg-gray-50')}`}>
+                      <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center ${dk('bg-emerald-500/10', 'bg-emerald-100')}`}>
+                        <Truck size={16} className="text-emerald-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-semibold truncate ${strong}`}>{d.item_type}</p>
+                        <p className={`text-xs truncate ${subtle}`}>{d.destination_address}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${s.color}`}>{s.label}</span>
+                          <span className={`text-[10px] ${subtle}`}>{fmtDate(d.created_at)}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm font-bold text-emerald-500 flex-shrink-0">{fmtMZN(d.estimated_value)}</p>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

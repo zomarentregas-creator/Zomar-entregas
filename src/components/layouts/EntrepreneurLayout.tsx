@@ -8,7 +8,7 @@ import {
   Package, History, PlusCircle, Bell,
   User, Settings, HelpCircle, CreditCard, BarChart,
   LogOut, Menu, X, ChevronDown, ChevronRight,
-  Sun, Moon, Store,
+  Sun, Moon, Store, Home, Wallet,
 } from 'lucide-react';
 import SupportButton from '../shared/SupportButton';
 
@@ -39,6 +39,13 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
       return n;
     });
   };
+
+  // Permite que a página inicial abra o menu lateral (mobile)
+  useEffect(() => {
+    const open = () => setSidebarOpen(true);
+    window.addEventListener('zomar:open-menu', open);
+    return () => window.removeEventListener('zomar:open-menu', open);
+  }, []);
 
   // Fecha sidebar ao redimensionar para desktop
   useEffect(() => {
@@ -83,6 +90,18 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
     { path: '/entrepreneur/notifications', icon: <Bell size={17}/>,       label: 'Notificações',  tip: 'Todas as notificações' },
     { path: '/entrepreneur/settings',      icon: <Settings size={17}/>,   label: 'Configurações', tip: 'Preferências da conta' },
     { path: '/entrepreneur/help',          icon: <HelpCircle size={17}/>, label: 'Ajuda',         tip: 'Centro de ajuda' },
+  ];
+
+  const isHome = location.pathname === '/entrepreneur/overview';
+  const bottomTabs = [
+    { label: 'Início',   icon: Home,    to: '/entrepreneur/overview',
+      match: ['/entrepreneur/overview'] },
+    { label: 'Pedidos',  icon: Package, to: '/entrepreneur/active-deliveries',
+      match: ['/entrepreneur/active-deliveries', '/entrepreneur/new-delivery', '/entrepreneur/delivery-history', '/entrepreneur/delivery/'] },
+    { label: 'Créditos', icon: Wallet,  to: '/entrepreneur/subscription',
+      match: ['/entrepreneur/subscription'] },
+    { label: 'Perfil',   icon: User,    to: '/entrepreneur/profile',
+      match: ['/entrepreneur/profile', '/entrepreneur/settings', '/entrepreneur/notifications', '/entrepreneur/help', '/entrepreneur/terms'] },
   ];
 
   const handleLogout = async () => {
@@ -183,7 +202,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
       {/* ══ MAIN ══ */}
       <div className="lg:pl-60">
 
-        <header className={`sticky top-0 z-40 backdrop-blur-xl border-b ${dk('bg-black/50 border-white/5', 'bg-white/95 border-gray-200')}`}>
+        <header className={`sticky top-0 z-40 backdrop-blur-xl border-b pt-[env(safe-area-inset-top)] ${isHome ? 'hidden lg:block' : ''} ${dk('bg-black/50 border-white/5', 'bg-white/95 border-gray-200')}`}>
           <div className="px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-white/5 flex-shrink-0">
@@ -294,9 +313,9 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
           </div>
         </header>
 
-        <main className="p-3 sm:p-4 lg:p-6">{children}</main>
+        <main className={`px-4 sm:px-6 lg:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6 ${isHome ? 'pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-6' : 'pt-4'}`}>{children}</main>
 
-        <footer className={`px-4 sm:px-6 py-4 border-t text-xs ${dk('border-white/5 bg-black/20', 'border-gray-200')}`}>
+        <footer className={`hidden lg:block px-4 sm:px-6 py-4 border-t text-xs ${dk('border-white/5 bg-black/20', 'border-gray-200')}`}>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
             <p className={dk('text-gray-500', 'text-gray-600')}>© {new Date().getFullYear()} ZOMAR • Empreendedor</p>
             <div className="flex items-center gap-4">
@@ -318,7 +337,26 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
         </footer>
       </div>
 
-      <SupportButton isDarkMode={isDarkMode} quickQuestions={['Como criar uma entrega?','Como alterar o meu plano?','Problemas com pagamento']}/>
+      {/* ══ BOTTOM NAV (mobile) ══ */}
+      <nav aria-label="Navegação principal"
+        className={`lg:hidden fixed bottom-0 inset-x-0 z-40 border-t backdrop-blur-xl pb-[env(safe-area-inset-bottom)] ${dk('bg-[#0a0f12]/95 border-white/[0.07]', 'bg-white/95 border-gray-200')}`}>
+        <div className="grid grid-cols-4 max-w-md mx-auto">
+          {bottomTabs.map(({ label, icon: Icon, to, match }) => {
+            const active = match.some(m => location.pathname.startsWith(m));
+            return (
+              <Link key={to} to={to} aria-current={active ? 'page' : undefined}
+                className={`flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 text-[11px] font-semibold transition-colors ${
+                  active ? 'text-emerald-500' : dk('text-gray-400 active:text-white', 'text-gray-500 active:text-gray-900')
+                }`}>
+                <Icon size={21} strokeWidth={active ? 2.4 : 2}/>
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <SupportButton isDarkMode={isDarkMode} raiseOnMobile quickQuestions={['Como criar uma entrega?','Como alterar o meu plano?','Problemas com pagamento']}/>
     </div>
   );
 };
