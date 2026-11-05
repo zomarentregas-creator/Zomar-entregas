@@ -190,7 +190,7 @@ export default function Overview() {
 
   // ─── Classes reutilizáveis ──────────────────────────────────────────────────
 
-  const card = `rounded-2xl border ${dk('bg-[#111a1f] border-white/[0.07]', 'bg-white border-gray-200 shadow-sm')}`
+  const card = `rounded-2xl border transition-all duration-300 ease-out ${dk('bg-gradient-to-br from-[#121c21] via-[#111a1f] to-[#0d1519] border-white/[0.07] shadow-[0_8px_30px_-18px_rgba(0,0,0,0.8)]', 'bg-white border-gray-200 shadow-sm')}`
   const subtle = dk('text-gray-400', 'text-gray-500')
   const strong = dk('text-white', 'text-gray-900')
 
@@ -249,13 +249,13 @@ export default function Overview() {
 
         {/* CTA */}
         <button onClick={() => navigate('/entrepreneur/new-delivery')}
-          className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-black font-bold text-base flex items-center justify-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)] transition-all">
-          Pedir entrega <ArrowRight size={18} />
+          className="group w-full h-14 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 bg-[length:180%_100%] bg-left hover:bg-right active:scale-[0.985] text-black font-bold text-base flex items-center justify-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.42)] hover:shadow-[0_12px_30px_-8px_rgba(16,185,129,0.52)] transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080d10]">
+          Pedir entrega <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
         </button>
 
         {/* Entrega em curso */}
         {active && stepInfo ? (
-          <section className={`${card} p-4 sm:p-5 space-y-4`}>
+          <section className={`${card} p-4 sm:p-5 space-y-4 hover:border-emerald-500/20`}>
             <div className="flex items-center justify-between gap-3">
               <h2 className={`text-sm ${subtle}`}>Entrega em curso</h2>
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
@@ -343,7 +343,7 @@ export default function Overview() {
             { label: 'Ajuda',    icon: HelpCircle, to: '/entrepreneur/help' },
           ].map(({ label, icon: Icon, to }) => (
             <button key={label} onClick={() => navigate(to)}
-              className={`${card} h-20 sm:h-24 flex flex-col items-center justify-center gap-2 text-sm font-semibold transition-colors ${dk('text-white hover:bg-white/5', 'text-gray-800 hover:bg-gray-50')}`}>
+              className={`${card} h-20 sm:h-24 flex flex-col items-center justify-center gap-2 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-500/25 ${dk('text-white hover:bg-white/[0.06] hover:shadow-[0_8px_24px_-16px_rgba(16,185,129,0.35)]', 'text-gray-800 hover:bg-gray-50')}`}>
               <Icon size={20} className="text-emerald-500" />
               {label}
             </button>
@@ -358,7 +358,7 @@ export default function Overview() {
             { label: 'Em andamento', value: stats.ongoing,  icon: Clock,         tone: 'text-yellow-500' },
             { label: 'Problemas',    value: stats.problems, icon: AlertTriangle, tone: 'text-red-400' },
           ].map(({ label, value, icon: Icon, tone }) => (
-            <div key={label} className={`${card} p-4 flex items-center justify-between gap-2`}>
+            <div key={label} className={`${card} p-4 flex items-center justify-between gap-2 hover:border-emerald-500/20`}>
               <div className="min-w-0">
                 <p className={`text-xs truncate ${subtle}`}>{label}</p>
                 <p className={`text-2xl font-bold mt-0.5 ${strong}`}>{value}</p>
@@ -386,7 +386,7 @@ export default function Overview() {
                 return (
                   <li key={d.id}>
                     <button onClick={() => navigate(`/entrepreneur/delivery/${d.id}`)}
-                      className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors ${dk('hover:bg-white/5', 'hover:bg-gray-50')}`}>
+                      className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors duration-200 ${dk('hover:bg-emerald-500/[0.045]', 'hover:bg-gray-50')}`}>
                       <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center ${dk('bg-emerald-500/10', 'bg-emerald-100')}`}>
                         <Truck size={16} className="text-emerald-500" />
                       </div>
