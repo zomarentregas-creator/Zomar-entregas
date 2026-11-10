@@ -1,0 +1,431 @@
+/* ============================================================================
+   ZOMAR — SISTEMA DE MOVIMENTO  (classes com prefixo "zm-")
+   ----------------------------------------------------------------------------
+   - Não altera a identidade visual: cores, fontes e gradientes continuam a ser
+     os do tema GameX (fundos escuros, esmeralda, teal).
+   - Só anima `transform` e `opacity` (leve em telemóveis).
+   - Respeita "reduzir movimento" do sistema (bloco no fim do ficheiro).
+   - Animações de entrada usam fill-mode `backwards`: depois de terminarem,
+     o elemento volta ao estilo normal e os efeitos de hover/active funcionam.
+   ========================================================================== */
+
+:root {
+  --zm-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --zm-ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Temas da página de login ─────────────────────────────────────────────── */
+
+.zm-dark {
+  --zm-bg: #0a0f14;
+  --zm-card: #0d1318;
+  --zm-text: #ffffff;
+  --zm-muted: rgba(255, 255, 255, 0.4);
+  --zm-placeholder: rgba(255, 255, 255, 0.3);
+  --zm-field: rgba(255, 255, 255, 0.05);
+  --zm-field-hover: rgba(255, 255, 255, 0.08);
+  --zm-field-border: rgba(255, 255, 255, 0.1);
+  --zm-line: rgba(255, 255, 255, 0.08);
+  --zm-scroll: rgba(255, 255, 255, 0.08);
+  --zm-blob-a: rgba(5, 150, 105, 0.07);
+  --zm-blob-b: rgba(20, 184, 166, 0.06);
+}
+
+.zm-light {
+  --zm-bg: #f1f5f9;
+  --zm-card: #ffffff;
+  --zm-text: #111827;
+  --zm-muted: #6b7280;
+  --zm-placeholder: #9ca3af;
+  --zm-field: rgba(0, 0, 0, 0.05);
+  --zm-field-hover: rgba(0, 0, 0, 0.07);
+  --zm-field-border: rgba(0, 0, 0, 0.1);
+  --zm-line: #e5e7eb;
+  --zm-scroll: rgba(0, 0, 0, 0.12);
+  --zm-blob-a: rgba(52, 211, 153, 0.14);
+  --zm-blob-b: rgba(94, 234, 212, 0.18);
+}
+
+.zm-login {
+  background-color: var(--zm-bg);
+  transition: background-color 0.5s var(--zm-ease-soft);
+}
+.zm-card { background-color: var(--zm-card); transition: background-color 0.5s var(--zm-ease-soft); }
+.zm-text { color: var(--zm-text); }
+.zm-muted { color: var(--zm-muted); }
+.zm-divider { border-color: var(--zm-line); }
+.zm-surface { background-color: var(--zm-card); }
+
+/* ─── Fundo ambiente (aurora) ──────────────────────────────────────────────── */
+
+.zm-aurora {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.zm-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  will-change: transform;
+}
+.zm-blob-a {
+  top: 0;
+  left: 25%;
+  width: min(700px, 80vw);
+  height: min(700px, 80vw);
+  background: var(--zm-blob-a);
+  animation: zm-drift-a 22s ease-in-out infinite;
+}
+.zm-blob-b {
+  bottom: 0;
+  right: 25%;
+  width: min(500px, 60vw);
+  height: min(500px, 60vw);
+  background: var(--zm-blob-b);
+  animation: zm-drift-b 26s ease-in-out infinite;
+}
+@keyframes zm-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(48px, 36px, 0); }
+}
+@keyframes zm-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-40px, -30px, 0); }
+}
+
+/* ─── Cartão com borda e brilho animados (mantém a identidade do login) ───── */
+
+@property --zm-ba { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@property --zm-sa { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+
+.zm-card-border {
+  --zm-ba: 0deg;
+  background: conic-gradient(
+    from var(--zm-ba),
+    rgba(16, 185, 129, 0.05) 0%,
+    rgba(16, 185, 129, 0.9) 18%,
+    rgba(52, 211, 153, 0.85) 28%,
+    rgba(6, 182, 212, 0.75) 38%,
+    rgba(20, 184, 166, 0.5) 50%,
+    rgba(6, 182, 212, 0.15) 62%,
+    rgba(16, 185, 129, 0.05) 72%,
+    rgba(16, 185, 129, 0.05) 100%
+  );
+  animation: zm-spin-border 7s linear infinite;
+}
+@keyframes zm-spin-border { from { --zm-ba: 0deg; } to { --zm-ba: 360deg; } }
+
+.zm-card-glow {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(860px, 94vw);
+  height: min(600px, 80vh);
+  border-radius: 32px;
+  z-index: 1;
+  pointer-events: none;
+  --zm-sa: 0deg;
+  background: conic-gradient(
+    from var(--zm-sa),
+    rgba(16, 185, 129, 0.4) 0%,
+    rgba(52, 211, 153, 0.28) 15%,
+    rgba(6, 182, 212, 0.22) 30%,
+    rgba(20, 184, 166, 0.12) 45%,
+    transparent 60%,
+    rgba(16, 185, 129, 0.08) 75%,
+    rgba(16, 185, 129, 0.4) 100%
+  );
+  filter: blur(42px);
+  animation: zm-spin-glow 10s linear infinite;
+  opacity: 0.6;
+}
+@keyframes zm-spin-glow { from { --zm-sa: 0deg; } to { --zm-sa: 360deg; } }
+@media (max-width: 640px) { .zm-card-glow { display: none; } }
+
+/* ─── Painel esquerdo (rota de entrega + capítulos) ───────────────────────── */
+
+.zm-hero {
+  background:
+    radial-gradient(120% 80% at 12% 100%, rgba(16, 185, 129, 0.3), transparent 55%),
+    radial-gradient(90% 60% at 92% 0%, rgba(6, 182, 212, 0.15), transparent 60%),
+    linear-gradient(160deg, #04221c 0%, #06201f 45%, #05090c 100%);
+}
+
+.zm-parallax {
+  transform: translate3d(calc(var(--px, 0) * var(--zm-px, -12px)), calc(var(--py, 0) * var(--zm-py, -9px)), 0);
+  transition: transform 0.6s var(--zm-ease-soft);
+}
+
+.zm-route-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: zm-draw 2.4s var(--zm-ease-soft) 0.3s backwards;
+}
+@keyframes zm-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+.zm-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: zm-ring 2.6s ease-out infinite;
+}
+@keyframes zm-ring {
+  0% { transform: scale(0.5); opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+.zm-float { animation: zm-float 6s ease-in-out infinite; }
+@keyframes zm-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+
+/* Barras de progresso dos capítulos */
+.zm-chbar {
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.zm-chbar > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #34d399;
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.zm-chbar.is-done > i { transform: scaleX(1); }
+.zm-chbar.is-active > i { animation: zm-progress var(--zm-ch-ms, 5200ms) linear forwards; }
+@keyframes zm-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Títulos que sobem linha a linha */
+.zm-line-up {
+  animation: zm-line-up 0.85s var(--zm-ease) backwards;
+  animation-delay: var(--zm-d, 0ms);
+}
+@keyframes zm-line-up {
+  from { transform: translate3d(0, 105%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+/* ─── Entradas ─────────────────────────────────────────────────────────────── */
+
+@keyframes zm-rise {
+  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes zm-swap-in {
+  from { opacity: 0; transform: translate3d(12px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes zm-pop {
+  0% { opacity: 0; transform: scale(0.6) translate3d(0, 6px, 0); }
+  60% { opacity: 1; transform: scale(1.06) translate3d(0, 0, 0); }
+  100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); }
+}
+@keyframes zm-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.zm-enter {
+  animation: zm-rise 0.8s var(--zm-ease) backwards;
+  animation-delay: var(--zm-d, 0ms);
+}
+.zm-swap {
+  animation: zm-swap-in 0.5s var(--zm-ease) backwards;
+  animation-delay: var(--zm-d, 0ms);
+}
+.zm-pop {
+  animation: zm-pop 0.55s var(--zm-ease) backwards;
+  animation-delay: var(--zm-d, 0ms);
+}
+
+/* Os filhos diretos entram em cascata */
+.zm-stagger > * { animation: zm-rise 0.7s var(--zm-ease) backwards; }
+.zm-stagger > *:nth-child(1) { animation-delay: 40ms; }
+.zm-stagger > *:nth-child(2) { animation-delay: 100ms; }
+.zm-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.zm-stagger > *:nth-child(4) { animation-delay: 220ms; }
+.zm-stagger > *:nth-child(5) { animation-delay: 280ms; }
+.zm-stagger > *:nth-child(6) { animation-delay: 340ms; }
+.zm-stagger > *:nth-child(7) { animation-delay: 400ms; }
+.zm-stagger > *:nth-child(8) { animation-delay: 460ms; }
+.zm-stagger > *:nth-child(9) { animation-delay: 520ms; }
+.zm-stagger > *:nth-child(n + 10) { animation-delay: 560ms; }
+
+/* Só aparece quando entra no ecrã (ver hook useReveal) */
+.zm-reveal { opacity: 0; }
+.zm-reveal.zm-in {
+  opacity: 1;
+  animation: zm-rise 0.8s var(--zm-ease) backwards;
+  animation-delay: var(--zm-d, 0ms);
+}
+
+.zm-seg-fill {
+  transform-origin: left;
+  animation: zm-grow 0.9s var(--zm-ease) backwards;
+  animation-delay: var(--zm-d, 0ms);
+}
+.zm-travel { transition: left 1.3s var(--zm-ease); }
+
+/* ─── Interações ───────────────────────────────────────────────────────────── */
+
+/* `!important` garante que a transição de `transform` não é anulada pelas
+   classes transition-* do Tailwind; as outras propriedades ficam listadas aqui. */
+.zm-press,
+.zm-lift {
+  transition:
+    transform 0.3s var(--zm-ease),
+    background-color 0.3s var(--zm-ease-soft),
+    background-position 0.5s var(--zm-ease-soft),
+    border-color 0.3s var(--zm-ease-soft),
+    color 0.3s var(--zm-ease-soft),
+    box-shadow 0.35s var(--zm-ease-soft),
+    opacity 0.3s var(--zm-ease-soft) !important;
+}
+.zm-press:active { transform: scale(0.97); }
+
+@media (hover: hover) {
+  .zm-lift:hover { transform: translate3d(0, -3px, 0); }
+  .zm-lift:active { transform: translate3d(0, -1px, 0) scale(0.98); }
+}
+
+/* Brilho que varre o botão */
+.zm-sheen { position: relative; overflow: hidden; isolation: isolate; }
+.zm-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.32) 50%, transparent 70%);
+  transform: translate3d(-120%, 0, 0);
+  transition: transform 0.9s var(--zm-ease);
+}
+@media (hover: hover) {
+  .zm-sheen:hover::after { transform: translate3d(120%, 0, 0); }
+}
+
+/* Luz que segue o rato dentro do cartão (ver `spotlight` em useMotion) */
+.zm-spot { position: relative; }
+.zm-spot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s var(--zm-ease-soft);
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), rgba(16, 185, 129, 0.13), transparent 65%);
+}
+@media (hover: hover) {
+  .zm-spot:hover::before { opacity: 1; }
+}
+
+/* Texto com gradiente esmeralda que flui devagar */
+.zm-gradient-text {
+  background: linear-gradient(100deg, #34d399, #22d3ee, #10b981, #34d399);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: zm-gradient 8s linear infinite;
+}
+@keyframes zm-gradient { to { background-position: 200% 0; } }
+
+/* Ponto "ao vivo" (o elemento já deve ser `relative` ou `absolute`) */
+.zm-live::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: zm-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes zm-ping {
+  0% { transform: scale(1); opacity: 0.6; }
+  75%, 100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* Brilho que percorre a barra de progresso */
+.zm-bar-shine { position: relative; overflow: hidden; }
+.zm-bar-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translate3d(-100%, 0, 0);
+  animation: zm-shimmer 2.4s ease-in-out infinite;
+}
+
+/* Esqueletos de carregamento */
+.zm-skeleton { position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.04); }
+.zm-skeleton.is-light { background: rgba(0, 0, 0, 0.05); }
+.zm-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translate3d(-100%, 0, 0);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+  animation: zm-shimmer 1.6s ease-in-out infinite;
+}
+.zm-skeleton.is-light::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+}
+@keyframes zm-shimmer { to { transform: translate3d(100%, 0, 0); } }
+
+/* ─── Campos do formulário ─────────────────────────────────────────────────── */
+
+.zm-input {
+  background-color: var(--zm-field);
+  border: 1px solid var(--zm-field-border);
+  color: var(--zm-text);
+  transition: border-color 0.25s var(--zm-ease-soft), background-color 0.25s var(--zm-ease-soft),
+    box-shadow 0.35s var(--zm-ease);
+}
+.zm-input::placeholder { color: var(--zm-placeholder); }
+.zm-input:hover { background-color: var(--zm-field-hover); }
+.zm-input:focus {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12), 0 10px 26px -14px rgba(16, 185, 129, 0.4);
+}
+.zm-input:-webkit-autofill {
+  -webkit-text-fill-color: var(--zm-text);
+  caret-color: var(--zm-text);
+  -webkit-box-shadow: 0 0 0 1000px var(--zm-card) inset;
+}
+
+.zm-scroll::-webkit-scrollbar { width: 3px; }
+.zm-scroll::-webkit-scrollbar-thumb { background: var(--zm-scroll); border-radius: 2px; }
+
+/* ─── Reduzir movimento ────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .zm-enter,
+  .zm-swap,
+  .zm-pop,
+  .zm-line-up,
+  .zm-stagger > *,
+  .zm-reveal.zm-in,
+  .zm-seg-fill,
+  .zm-route-draw,
+  .zm-card-border,
+  .zm-card-glow,
+  .zm-blob,
+  .zm-ring,
+  .zm-float,
+  .zm-gradient-text,
+  .zm-live::after,
+  .zm-bar-shine::after,
+  .zm-skeleton::after {
+    animation: none !important;
+  }
+  .zm-reveal { opacity: 1; }
+  .zm-parallax { transform: none; transition: none; }
+  .zm-travel { transition: none; }
+  .zm-sheen::after { display: none; }
+  .zm-chbar.is-active > i { animation: none; transform: scaleX(1); }
+}
