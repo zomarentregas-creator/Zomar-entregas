@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight, Phone, MapPin, Wallet, Clock, HelpCircle, Bell, Menu,
-  Package, CheckCircle, Truck, ChevronRight, Shield, Activity, Loader2,
-  KeyRound, Navigation,
+  Package, CheckCircle, Truck, ChevronRight, Shield, Activity, KeyRound, Navigation,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { AnimatedNumber, PageSkeleton, stagger } from '../Common/MotionKit'
+import { spotlight } from '../../hooks/useMotion'
+import '../../styles/zomar-nav.css'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -164,11 +166,7 @@ export default function DelivererDashboard() {
   const roundBtn = `relative w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${dk('bg-[#111a1f] border-white/10 text-gray-300 hover:bg-white/10', 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50')}`
   const trustColor = (n: number) => (n >= 7 ? 'text-emerald-500' : n >= 4 ? 'text-yellow-500' : 'text-red-400')
 
-  if (loading) return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <Loader2 className={`animate-spin ${dk('text-emerald-400', 'text-emerald-600')}`} size={36} />
-    </div>
-  )
+  if (loading) return <PageSkeleton dark={isDarkMode} rows={2} />
 
   return (
     <div className="mx-auto w-full max-w-5xl lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-6 lg:items-start">
@@ -311,8 +309,8 @@ export default function DelivererDashboard() {
             { label: 'Ajuda',     icon: HelpCircle, to: '/deliverer/help' },
           ].map(({ label, icon: Icon, to }) => (
             <button key={label} onClick={() => navigate(to)}
-              className={`${card} h-20 sm:h-24 flex flex-col items-center justify-center gap-2 text-sm font-semibold transition-colors ${dk('text-white hover:bg-white/5', 'text-gray-800 hover:bg-gray-50')}`}>
-              <Icon size={20} className="text-emerald-500" />
+              className={`${card} zm-press zm-lift group h-20 sm:h-24 flex flex-col items-center justify-center gap-2 text-sm font-semibold transition-colors ${dk('text-white hover:bg-white/5', 'text-gray-800 hover:bg-gray-50')}`}>
+              <Icon size={20} className="text-emerald-500 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6" />
               {label}
             </button>
           ))}
@@ -322,12 +320,12 @@ export default function DelivererDashboard() {
         {stats && (
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Ganhos totais',     value: fmtMZN(stats.totalEarnings), sub: `Hoje: ${fmtMZN(stats.todayEarnings)}`, icon: Wallet,      tone: 'text-emerald-500' },
-              { label: 'Em curso',          value: String(stats.activeDeliveries), sub: stats.activeDeliveries ? 'Agora' : 'Nenhuma', icon: Truck,       tone: 'text-blue-400' },
-              { label: 'Taxa de conclusão', value: `${stats.completionRate}%`, sub: `${stats.completedDeliveries} de ${stats.totalDeliveries}`, icon: CheckCircle, tone: stats.completionRate >= 80 ? 'text-green-500' : 'text-yellow-500' },
+              { label: 'Ganhos totais',     value: <AnimatedNumber value={stats.totalEarnings} format={fmtMZN} />, sub: `Hoje: ${fmtMZN(stats.todayEarnings)}`, icon: Wallet,      tone: 'text-emerald-500' },
+              { label: 'Em curso',          value: <AnimatedNumber value={stats.activeDeliveries} />, sub: stats.activeDeliveries ? 'Agora' : 'Nenhuma', icon: Truck,       tone: 'text-blue-400' },
+              { label: 'Taxa de conclusão', value: <AnimatedNumber value={stats.completionRate} format={n => `${Math.round(n)}%`} />, sub: `${stats.completedDeliveries} de ${stats.totalDeliveries}`, icon: CheckCircle, tone: stats.completionRate >= 80 ? 'text-green-500' : 'text-yellow-500' },
               { label: 'Tempo médio',       value: formatTime(stats.avgDeliveryTimeHours), sub: 'por entrega', icon: Clock,       tone: 'text-purple-400' },
-            ].map(({ label, value, sub, icon: Icon, tone }) => (
-              <div key={label} className={`${card} p-4`}>
+            ].map(({ label, value, sub, icon: Icon, tone }, idx) => (
+              <div key={label} onPointerMove={spotlight} style={stagger(idx, 70)} className={`${card} zm-spot zm-lift zm-swap p-4`}>
                 <div className="flex items-center justify-between gap-2">
                   <p className={`text-xs truncate ${subtle}`}>{label}</p>
                   <Icon size={17} className={`flex-shrink-0 ${tone}`} />
@@ -376,8 +374,8 @@ export default function DelivererDashboard() {
               </button>
             </div>
             <ul className={`divide-y ${dk('divide-white/[0.06]', 'divide-gray-100')}`}>
-              {active.slice(1, 4).map(d => (
-                <li key={d.id}>
+              {active.slice(1, 4).map((d, i) => (
+                <li key={d.id} className="zm-swap" style={stagger(i, 70, 100)}>
                   <button onClick={() => navigate('/deliverer/my-deliveries')}
                     className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors ${dk('hover:bg-white/5', 'hover:bg-gray-50')}`}>
                     <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center ${dk('bg-emerald-500/10', 'bg-emerald-100')}`}>
