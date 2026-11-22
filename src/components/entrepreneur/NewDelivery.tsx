@@ -511,7 +511,7 @@ export default function NewDelivery() {
               value={itemType}
               onChange={e => setItemType(e.target.value)}
               placeholder="Ex: Roupas, Electrónicos, Documentos…"
-              className={`w-full pl-11 pr-4 py-3 rounded-xl border outline-none transition-all text-sm ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
+              className={`w-full pl-11 pr-4 py-3 rounded-xl border outline-none transition-all text-sm ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.12)]', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
             />
           </div>
         </div>
@@ -545,7 +545,7 @@ export default function NewDelivery() {
                   value={value}
                   onChange={e => setter(e.target.value)}
                   placeholder={placeholder}
-                  className={`w-full pl-11 pr-4 py-3 rounded-xl border outline-none transition-all text-sm ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
+                  className={`w-full pl-11 pr-4 py-3 rounded-xl border outline-none transition-all text-sm ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.12)]', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
                 />
               </div>
             </div>
@@ -567,7 +567,7 @@ export default function NewDelivery() {
               value={estimatedValue}
               onChange={e => setEstimatedValue(e.target.value)}
               placeholder="0"
-              className={`w-full pl-11 pr-4 py-3 rounded-xl border outline-none transition-all text-sm ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
+              className={`w-full pl-11 pr-4 py-3 rounded-xl border outline-none transition-all text-sm ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.12)]', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
             />
           </div>
           <p className={`text-xs mt-1 ${dk('text-gray-600', 'text-gray-400')}`}>
@@ -591,7 +591,7 @@ export default function NewDelivery() {
             onChange={e => setNotes(e.target.value)}
             placeholder="Instruções especiais, horário preferido, código de acesso…"
             rows={3}
-            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all text-sm resize-none ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
+            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all text-sm resize-none ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.12)]', 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:bg-white shadow-sm')}`}
           />
         </div>
 
@@ -770,7 +770,7 @@ export default function NewDelivery() {
               loading ||
               (deliveriesTotal > 0 && deliveriesTotal < 999999 && remainingDels <= 0)
             }
-            className={`flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-40 ${
+            className={`zm-press zm-sheen flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-40 ${
               isScheduled
                 ? dk('bg-blue-500 hover:bg-blue-400 text-white', 'bg-blue-600 hover:bg-blue-700 text-white')
                 : dk('bg-emerald-500 hover:bg-emerald-400 text-black', 'bg-emerald-600 hover:bg-emerald-700 text-white')
