@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { PageSkeleton, stagger } from '../Common/MotionKit'
+import '../../styles/zomar-nav.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,11 +138,7 @@ export default function ActiveDeliveries() {
   const card = `rounded-2xl border transition-all duration-200 ${dk('bg-[#1a1a1a] border-white/8', 'bg-white border-gray-200 shadow-sm')}`
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div className="min-h-[40vh] flex items-center justify-center">
-      <Loader2 className={`animate-spin ${dk('text-emerald-400', 'text-emerald-600')}`} size={32}/>
-    </div>
-  )
+  if (loading) return <PageSkeleton dark={isDarkMode} rows={3} />
 
   return (
     <div className="space-y-5">
@@ -156,11 +154,11 @@ export default function ActiveDeliveries() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load}
-            className={`p-2.5 rounded-xl ${dk('bg-white/5 hover:bg-white/10 text-gray-400', 'bg-gray-100 hover:bg-gray-200 text-gray-500')}`}>
+            className={`zm-press p-2.5 rounded-xl ${dk('bg-white/5 hover:bg-white/10 text-gray-400', 'bg-gray-100 hover:bg-gray-200 text-gray-500')}`}>
             <RefreshCw size={16}/>
           </button>
           <button onClick={() => navigate('/entrepreneur/new-delivery')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold ${dk('bg-emerald-500 text-black hover:bg-emerald-400', 'bg-emerald-600 text-white hover:bg-emerald-700')}`}>
+            className={`zm-press zm-sheen flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold ${dk('bg-emerald-500 text-black hover:bg-emerald-400', 'bg-emerald-600 text-white hover:bg-emerald-700')}`}>
             + Nova
           </button>
         </div>
@@ -175,19 +173,19 @@ export default function ActiveDeliveries() {
             Cria uma nova entrega para começar
           </p>
           <button onClick={() => navigate('/entrepreneur/new-delivery')}
-            className={`mx-auto flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold ${dk('bg-emerald-500 text-black', 'bg-emerald-600 text-white')}`}>
+            className={`zm-press zm-sheen mx-auto flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold ${dk('bg-emerald-500 text-black', 'bg-emerald-600 text-white')}`}>
             Criar entrega
           </button>
         </div>
       )}
 
       {/* Cards de entrega */}
-      {deliveries.map(d => {
+      {deliveries.map((d, idx) => {
         const sc  = STATUS_CFG[d.current_status] || STATUS_CFG.accepted
         const isProblem = d.current_status === 'problem'
 
         return (
-          <div key={d.id} className={`${card} overflow-hidden ${isProblem ? dk('border-red-500/30', 'border-red-300') : ''}`}>
+          <div key={d.id} style={stagger(idx, 90)} className={`${card} zm-swap overflow-hidden ${isProblem ? dk('border-red-500/30', 'border-red-300') : ''}`}>
 
             {/* Barra de progresso do status */}
             {!isProblem && (
@@ -298,8 +296,8 @@ export default function ActiveDeliveries() {
 
       {/* ── Modal: código de confirmação ── */}
       {codeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`w-full max-w-sm rounded-2xl border p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
+        <div className="zn-fade fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`zn-modal w-full max-w-sm rounded-2xl border p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl ${dk('bg-orange-500/15', 'bg-orange-50')}`}>
