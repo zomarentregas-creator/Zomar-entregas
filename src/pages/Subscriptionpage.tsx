@@ -12,6 +12,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { PLANS, PLAN_MAP, formatMZN, stripeEnabled, type Plan } from '../config/plans'
 import { useStripe } from '../hooks/useStripe'
+import { stagger } from '../components/Common/MotionKit'
+import '../styles/zomar-nav.css'
 
 interface Subscription {
   id: string; user_id: string; plan_id: string; plan_name: string; price: number
@@ -24,11 +26,11 @@ type PayMethod = 'card' | 'mobile'
 type Step = 'plans' | 'choose_method' | 'mobile_instructions' | 'processing' | 'success' | 'error'
 
 const fmtDate = (d?: string | null) =>
-  d ? new Date(d).toLocaleDateString('pt-MZ', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '\u2014'
+  d ? new Date(d).toLocaleDateString('pt-MZ', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
   active:   { label: 'Activo',                color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-  trialing: { label: 'Per\u00edodo de Teste', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+  trialing: { label: 'Período de Teste', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
   canceled: { label: 'Cancelado',             color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' },
   expired:  { label: 'Expirado',              color: 'text-red-400 bg-red-500/10 border-red-500/20' },
   pending:  { label: 'Pagamento pendente',    color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
@@ -90,7 +92,7 @@ export default function SubscriptionPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'subscriptions',
         filter: `user_id=eq.${user.id}` }, () => {
           load()
-          if (prevStatus === 'pending') setActMsg({ ok: true, text: '\u2705 Plano activado! J\u00e1 podes criar entregas.' })
+          if (prevStatus === 'pending') setActMsg({ ok: true, text: '✅ Plano activado! Já podes criar entregas.' })
         })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
@@ -115,7 +117,7 @@ export default function SubscriptionPage() {
       await stripe.redirectToCheckout(selPlan.stripe_price_id, selPlan.id, selPlan.name)
       setStep('choose_method')
     } catch {
-      setErrMsg(stripe.error || 'Erro ao iniciar pagamento por cart\u00e3o.')
+      setErrMsg(stripe.error || 'Erro ao iniciar pagamento por cartão.')
       setStep('error')
     }
   }
@@ -139,12 +141,12 @@ export default function SubscriptionPage() {
   }
 
   const handleCancel = async () => {
-    if (!sub || !window.confirm('Cancelar a assinatura?\n\nO acesso continua at\u00e9 ao fim do per\u00edodo actual.')) return
+    if (!sub || !window.confirm('Cancelar a assinatura?\n\nO acesso continua até ao fim do período actual.')) return
     setActLoad(true)
     try {
       await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', sub.id)
       setSub(p => p ? { ...p, status: 'canceled' } : null)
-      setActMsg({ ok: true, text: 'Assinatura cancelada. O acesso continua at\u00e9 ao fim do per\u00edodo.' })
+      setActMsg({ ok: true, text: 'Assinatura cancelada. O acesso continua até ao fim do período.' })
     } catch (e: any) { setActMsg({ ok: false, text: e.message || 'Erro ao cancelar.' }) }
     finally { setActLoad(false) }
   }
@@ -184,9 +186,9 @@ export default function SubscriptionPage() {
         )}
         <div>
           <h2 className={`text-2xl font-bold ${dk('text-white','text-gray-900')}`}>
-            {step==='plans'?'Planos e Subscri\u00e7\u00e3o':step==='choose_method'?'Como queres pagar?':step==='mobile_instructions'?'Instru\u00e7\u00f5es de pagamento':step==='processing'?'A processar\u2026':step==='success'?'Pedido registado!':'Algo correu mal'}
+            {step==='plans'?'Planos e Subscrição':step==='choose_method'?'Como queres pagar?':step==='mobile_instructions'?'Instruções de pagamento':step==='processing'?'A processar…':step==='success'?'Pedido registado!':'Algo correu mal'}
           </h2>
-          {step==='plans' && <p className={`text-sm mt-0.5 ${dk('text-gray-400','text-gray-500')}`}>7 dias gr\u00e1tis \u00b7 Cart\u00e3o ou carteira m\u00f3vel \u00b7 Cancela quando quiseres</p>}
+          {step==='plans' && <p className={`text-sm mt-0.5 ${dk('text-gray-400','text-gray-500')}`}>7 dias grátis · Cartão ou carteira móvel · Cancela quando quiseres</p>}
         </div>
       </div>
 
@@ -210,23 +212,23 @@ export default function SubscriptionPage() {
                   {subStatus && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${subStatus.color}`}>{subStatus.label}</span>}
                   {sub.payment_method && (
                     <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${hasPaidByCard?dk('border-blue-500/20 bg-blue-500/10 text-blue-400','border-blue-200 bg-blue-50 text-blue-700'):dk('border-orange-500/20 bg-orange-500/10 text-orange-400','border-orange-200 bg-orange-50 text-orange-700')}`}>
-                      {hasPaidByCard?<CreditCard size={9}/>:<Smartphone size={9}/>} {hasPaidByCard?'Cart\u00e3o':'Carteira m\u00f3vel'}
+                      {hasPaidByCard?<CreditCard size={9}/>:<Smartphone size={9}/>} {hasPaidByCard?'Cartão':'Carteira móvel'}
                     </span>
                   )}
                 </div>
                 <p className={`text-xl font-black ${dk('text-white','text-gray-900')}`}>{sub.plan_name}</p>
-                {PLAN_MAP[sub.plan_id] && <p className={`text-xs mt-0.5 ${dk('text-gray-500','text-gray-400')}`}>Cobertura at\u00e9 {formatMZN(PLAN_MAP[sub.plan_id].coverage)}</p>}
+                {PLAN_MAP[sub.plan_id] && <p className={`text-xs mt-0.5 ${dk('text-gray-500','text-gray-400')}`}>Cobertura até {formatMZN(PLAN_MAP[sub.plan_id].coverage)}</p>}
               </div>
-              <p className={`text-2xl font-black ${dk('text-white','text-gray-900')}`}>{formatMZN(sub.price)}<span className={`text-sm font-normal ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span></p>
+              <p className={`text-2xl font-black ${dk('text-white','text-gray-900')}`}>{formatMZN(sub.price)}<span className={`text-sm font-normal ${dk('text-gray-500','text-gray-400')}`}>/mês</span></p>
             </div>
 
             {isPending && (
               <div className={`flex items-start gap-3 p-4 rounded-xl mb-4 ${dk('bg-orange-500/8 border border-orange-500/20','bg-orange-50 border border-orange-200')}`}>
                 <Clock size={15} className="text-orange-400 flex-shrink-0 mt-0.5"/>
                 <div>
-                  <p className={`text-sm font-semibold ${dk('text-orange-300','text-orange-700')}`}>A aguardar confirma\u00e7\u00e3o de pagamento</p>
+                  <p className={`text-sm font-semibold ${dk('text-orange-300','text-orange-700')}`}>A aguardar confirmação de pagamento</p>
                   <p className={`text-xs mt-0.5 ${dk('text-orange-400','text-orange-600')}`}>
-                    Enviaste o comprovativo por WhatsApp? A equipa activa em at\u00e9 2 horas. N\u00e3o enviaste? Envia para <strong>+258 84 XXX XXXX</strong>.
+                    Enviaste o comprovativo por WhatsApp? A equipa activa em até 2 horas. Não enviaste? Envia para <strong>+258 84 XXX XXXX</strong>.
                   </p>
                 </div>
               </div>
@@ -236,8 +238,8 @@ export default function SubscriptionPage() {
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {[
                   { icon:<Package size={13}/>,   bg:dk('bg-emerald-500/10','bg-emerald-50'), color:'text-emerald-400', label:'Usadas',   value:`${sub.current_usage}${sub.max_deliveries<999_999?` / ${sub.max_deliveries}`:''}` },
-                  { icon:<TrendingUp size={13}/>, bg:dk('bg-blue-500/10','bg-blue-50'),      color:'text-blue-400',    label:'Restantes', value:sub.max_deliveries>=999_999?'\u221e':String(Math.max(0,sub.max_deliveries-sub.current_usage)) },
-                  { icon:<Calendar size={13}/>,   bg:dk('bg-purple-500/10','bg-purple-50'),  color:'text-purple-400',  label:'Renova\u00e7\u00e3o', value:fmtDate(sub.renewal_date) },
+                  { icon:<TrendingUp size={13}/>, bg:dk('bg-blue-500/10','bg-blue-50'),      color:'text-blue-400',    label:'Restantes', value:sub.max_deliveries>=999_999?'∞':String(Math.max(0,sub.max_deliveries-sub.current_usage)) },
+                  { icon:<Calendar size={13}/>,   bg:dk('bg-purple-500/10','bg-purple-50'),  color:'text-purple-400',  label:'Renovação', value:fmtDate(sub.renewal_date) },
                 ].map(({icon,bg,color,label,value})=>(
                   <div key={label} className={`flex items-center gap-2.5 p-3 rounded-xl ${dk('bg-white/4','bg-gray-50')}`}>
                     <div className={`p-2 rounded-lg ${bg}`}><span className={color}>{icon}</span></div>
@@ -263,7 +265,7 @@ export default function SubscriptionPage() {
               {isActive && <button onClick={()=>navigate('/entrepreneur/new-delivery')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${dk('bg-emerald-500 hover:bg-emerald-400 text-black','bg-emerald-600 hover:bg-emerald-700 text-white')}`}><Truck size={13}/> Nova Entrega</button>}
               {isActive && hasPaidByCard && (
                 <button onClick={handleStripePortal} disabled={stripe.loading} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border ${dk('border-blue-500/25 bg-blue-500/8 text-blue-400 hover:bg-blue-500/15','border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100')}`}>
-                  {stripe.loading?<Loader2 size={13} className="animate-spin"/>:<ExternalLink size={13}/>} Gerir cart\u00e3o
+                  {stripe.loading?<Loader2 size={13} className="animate-spin"/>:<ExternalLink size={13}/>} Gerir cartão
                 </button>
               )}
               {isCanceled
@@ -277,35 +279,35 @@ export default function SubscriptionPage() {
         {!loadSub && !sub && (
           <div className={`rounded-2xl border p-6 text-center ${dk('bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border-emerald-500/20','bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200')}`}>
             <Zap className="text-emerald-400 mx-auto mb-2" size={26}/>
-            <h3 className={`text-xl font-bold mb-1 ${dk('text-white','text-gray-900')}`}>\u2728 7 Dias Gr\u00e1tis!</h3>
-            <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>Cart\u00e3o ou M-Pesa/e-Mola/M-Kesh \u00b7 Cancela quando quiseres</p>
+            <h3 className={`text-xl font-bold mb-1 ${dk('text-white','text-gray-900')}`}>✨ 7 Dias Grátis!</h3>
+            <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>Cartão ou M-Pesa/e-Mola/M-Kesh · Cancela quando quiseres</p>
           </div>
         )}
 
         <div>
           <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${dk('text-gray-500','text-gray-400')}`}>{sub?'Mudar de plano':'Escolhe o teu plano'}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {PLANS.map(plan=>{
+            {PLANS.map((plan, pIdx)=>{
               const c=C[plan.color], isCur=sub?.plan_id===plan.id&&isActive
               const PIcon=plan.color==='emerald'?Star:plan.color==='blue'?Zap:Building2
               return (
-                <div key={plan.id} className={`${card} p-5 flex flex-col relative ${plan.badge?`border-2 ${c.border}`:''}`}>
+                <div key={plan.id} style={stagger(pIdx, 100)} className={`${card} zm-swap zm-lift p-5 flex flex-col relative ${plan.badge?`border-2 ${c.border}`:''}`}>
                   {plan.badge && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black uppercase border bg-[#1a1a1a]"><span className={c.text}>{plan.badge}</span></div>}
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${c.icon}`}><PIcon size={17}/></div>
                   <h4 className={`text-lg font-black mb-0.5 ${dk('text-white','text-gray-900')}`}>{plan.name}</h4>
                   <p className={`text-xs mb-3 ${dk('text-gray-500','text-gray-400')}`}>{plan.description}</p>
                   <div className="flex items-baseline gap-1 mb-1">
                     <span className={`text-2xl font-black ${c.text}`}>{formatMZN(plan.price)}</span>
-                    <span className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span>
+                    <span className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>/mês</span>
                   </div>
-                  {!sub && <p className={`text-[11px] mb-3 ${dk('text-emerald-400','text-emerald-600')}`}>\u2728 7 dias gr\u00e1tis</p>}
+                  {!sub && <p className={`text-[11px] mb-3 ${dk('text-emerald-400','text-emerald-600')}`}>✨ 7 dias grátis</p>}
                   <div className={`flex items-center gap-1.5 mb-3 text-[10px] ${dk('text-gray-600','text-gray-400')}`}>
-                    <Smartphone size={10}/> M-Pesa \u00b7 e-Mola \u00b7 M-Kesh
-                    {plan.stripe_price_id && <><span className="mx-1">\u00b7</span><CreditCard size={10}/> Cart\u00e3o</>}
+                    <Smartphone size={10}/> M-Pesa · e-Mola · M-Kesh
+                    {plan.stripe_price_id && <><span className="mx-1">·</span><CreditCard size={10}/> Cartão</>}
                   </div>
                   <div className={`space-y-1.5 mb-4 text-xs ${dk('bg-white/3','bg-gray-50')} rounded-xl p-3`}>
-                    <div className={`flex items-center gap-1.5 ${dk('text-gray-400','text-gray-600')}`}><Truck size={11}/>{plan.max_deliveries<999_999?`${plan.max_deliveries} entregas/m\u00eas`:'Ilimitadas'}</div>
-                    <div className={`flex items-center gap-1.5 ${dk('text-gray-400','text-gray-600')}`}><Shield size={11}/>Cobertura at\u00e9 {formatMZN(plan.coverage)}</div>
+                    <div className={`flex items-center gap-1.5 ${dk('text-gray-400','text-gray-600')}`}><Truck size={11}/>{plan.max_deliveries<999_999?`${plan.max_deliveries} entregas/mês`:'Ilimitadas'}</div>
+                    <div className={`flex items-center gap-1.5 ${dk('text-gray-400','text-gray-600')}`}><Shield size={11}/>Cobertura até {formatMZN(plan.coverage)}</div>
                   </div>
                   <ul className="space-y-2 flex-1 mb-5">
                     {plan.features.map(f=>(
@@ -317,7 +319,7 @@ export default function SubscriptionPage() {
                   </ul>
                   {isCur
                     ? <div className={`w-full py-2.5 rounded-xl text-center text-sm font-semibold ${dk('bg-white/5 text-gray-400','bg-gray-100 text-gray-500')}`}><CheckCircle size={12} className="inline mr-1"/>Plano actual</div>
-                    : <button onClick={()=>handleSelect(plan)} className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] ${c.btn}`}>{sub?'Mudar para este':'Come\u00e7ar agora'} <ChevronRight size={12} className="inline"/></button>
+                    : <button onClick={()=>handleSelect(plan)} className={`zm-press zm-sheen w-full py-2.5 rounded-xl text-sm font-bold transition-all ${c.btn}`}>{sub?'Mudar para este':'Começar agora'} <ChevronRight size={12} className="inline"/></button>
                   }
                 </div>
               )
@@ -331,7 +333,7 @@ export default function SubscriptionPage() {
         <div className="space-y-4">
           <div className={`${card} p-4 flex items-center justify-between`}>
             <div><p className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>Plano</p><p className={`font-bold ${dk('text-white','text-gray-900')}`}>{selPlan.name}</p></div>
-            <p className={`text-xl font-black ${C[selPlan.color].text}`}>{formatMZN(selPlan.price)}<span className={`text-xs font-normal ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span></p>
+            <p className={`text-xl font-black ${C[selPlan.color].text}`}>{formatMZN(selPlan.price)}<span className={`text-xs font-normal ${dk('text-gray-500','text-gray-400')}`}>/mês</span></p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button onClick={()=>{setPayMethod('card');handleStripeCheckout()}} disabled={stripe.loading} className={`${card} p-5 text-left transition-all hover:border-blue-500/40 disabled:opacity-60 group`}>
@@ -339,11 +341,11 @@ export default function SubscriptionPage() {
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${dk('bg-blue-500/15','bg-blue-50')}`}><CreditCard size={22} className="text-blue-400"/></div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className={`font-bold ${dk('text-white','text-gray-900')}`}>Cart\u00e3o de cr\u00e9dito/d\u00e9bito</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dk('bg-emerald-500/15 text-emerald-400','bg-emerald-100 text-emerald-700')}`}>Autom\u00e1tico</span>
+                    <p className={`font-bold ${dk('text-white','text-gray-900')}`}>Cartão de crédito/débito</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dk('bg-emerald-500/15 text-emerald-400','bg-emerald-100 text-emerald-700')}`}>Automático</span>
                   </div>
-                  <p className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>Visa, Mastercard. Activa\u00e7\u00e3o imediata \u2014 sem espera.</p>
-                  <p className={`text-xs mt-2 ${dk('text-blue-400','text-blue-600')}`}>Powered by Stripe \u00b7 Pagamento seguro</p>
+                  <p className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>Visa, Mastercard. Activação imediata — sem espera.</p>
+                  <p className={`text-xs mt-2 ${dk('text-blue-400','text-blue-600')}`}>Powered by Stripe · Pagamento seguro</p>
                 </div>
                 <ChevronRight size={16} className={`flex-shrink-0 mt-1 ${dk('text-gray-600 group-hover:text-blue-400','text-gray-300 group-hover:text-blue-600')} transition-colors`}/>
               </div>
@@ -353,17 +355,17 @@ export default function SubscriptionPage() {
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${dk('bg-orange-500/15','bg-orange-50')}`}><Smartphone size={22} className="text-orange-400"/></div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className={`font-bold ${dk('text-white','text-gray-900')}`}>M-Pesa \u00b7 e-Mola \u00b7 M-Kesh</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dk('bg-orange-500/15 text-orange-400','bg-orange-100 text-orange-700')}`}>At\u00e9 2h</span>
+                    <p className={`font-bold ${dk('text-white','text-gray-900')}`}>M-Pesa · e-Mola · M-Kesh</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dk('bg-orange-500/15 text-orange-400','bg-orange-100 text-orange-700')}`}>Até 2h</span>
                   </div>
-                  <p className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>Transfer\u00eancia manual \u2014 envias comprovativo por WhatsApp e activamos em at\u00e9 2 horas.</p>
-                  <p className={`text-xs mt-2 ${dk('text-orange-400','text-orange-600')}`}>Sem conta banc\u00e1ria necess\u00e1ria</p>
+                  <p className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>Transferência manual — envias comprovativo por WhatsApp e activamos em até 2 horas.</p>
+                  <p className={`text-xs mt-2 ${dk('text-orange-400','text-orange-600')}`}>Sem conta bancária necessária</p>
                 </div>
                 <ChevronRight size={16} className={`flex-shrink-0 mt-1 ${dk('text-gray-600 group-hover:text-orange-400','text-gray-300 group-hover:text-orange-600')} transition-colors`}/>
               </div>
             </button>
           </div>
-          <p className={`text-center text-xs ${dk('text-gray-600','text-gray-400')}`}>Ambos os m\u00e9todos incluem 7 dias gr\u00e1tis</p>
+          <p className={`text-center text-xs ${dk('text-gray-600','text-gray-400')}`}>Ambos os métodos incluem 7 dias grátis</p>
         </div>
       )}
 
@@ -372,15 +374,15 @@ export default function SubscriptionPage() {
         <div className="space-y-4">
           <div className={`${card} p-4 flex items-center justify-between`}>
             <div><p className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>Plano</p><p className={`font-bold ${dk('text-white','text-gray-900')}`}>{selPlan.name}</p></div>
-            <p className={`text-xl font-black ${C[selPlan.color].text}`}>{formatMZN(selPlan.price)}<span className={`text-xs font-normal ${dk('text-gray-500','text-gray-400')}`}>/m\u00eas</span></p>
+            <p className={`text-xl font-black ${C[selPlan.color].text}`}>{formatMZN(selPlan.price)}<span className={`text-xs font-normal ${dk('text-gray-500','text-gray-400')}`}>/mês</span></p>
           </div>
           <div className={`${card} p-5`}>
             <p className={`text-xs font-bold uppercase tracking-wider mb-4 ${dk('text-gray-400','text-gray-500')}`}>Como activar o teu plano</p>
             {[
-              { n:'1', title:'Faz a transfer\u00eancia', desc:`Envia ${formatMZN(selPlan.price)} via M-Pesa, e-Mola ou M-Kesh para o n\u00famero ZOMAR.` },
-              { n:'2', title:'Guarda o comprovativo', desc:'Faz screenshot ou anota o c\u00f3digo da transa\u00e7\u00e3o gerado ap\u00f3s a transfer\u00eancia.' },
+              { n:'1', title:'Faz a transferência', desc:`Envia ${formatMZN(selPlan.price)} via M-Pesa, e-Mola ou M-Kesh para o número ZOMAR.` },
+              { n:'2', title:'Guarda o comprovativo', desc:'Faz screenshot ou anota o código da transação gerado após a transferência.' },
               { n:'3', title:'Envia pelo WhatsApp', desc:'Manda o comprovativo para +258 84 XXX XXXX com o teu nome e email da conta ZOMAR.' },
-              { n:'4', title:'Activamos em at\u00e9 2h', desc:'A equipa confirma e activa o plano. Recebes uma notifica\u00e7\u00e3o no app.' },
+              { n:'4', title:'Activamos em até 2h', desc:'A equipa confirma e activa o plano. Recebes uma notificação no app.' },
             ].map(({n,title,desc})=>(
               <div key={n} className="flex items-start gap-3 mb-4">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${dk('bg-emerald-500/20 text-emerald-400','bg-emerald-100 text-emerald-700')}`}>{n}</div>
@@ -388,7 +390,7 @@ export default function SubscriptionPage() {
               </div>
             ))}
             <div className={`rounded-xl p-4 mb-4 ${dk('bg-emerald-500/8 border border-emerald-500/15','bg-emerald-50 border border-emerald-200')}`}>
-              <p className={`text-xs font-bold mb-3 ${dk('text-emerald-400','text-emerald-700')}`}>N\u00fameros para transfer\u00eancia</p>
+              <p className={`text-xs font-bold mb-3 ${dk('text-emerald-400','text-emerald-700')}`}>Números para transferência</p>
               <div className="space-y-2">
                 {[{label:'M-Pesa (Vodacom 84/85)',num:'+258 84 XXX XXXX'},{label:'e-Mola (Movitel 86/87)',num:'+258 86 XXX XXXX'},{label:'M-Kesh (BIM 83)',num:'+258 83 XXX XXXX'}].map(({label,num})=>(
                   <div key={label} className="flex justify-between items-center">
@@ -400,12 +402,12 @@ export default function SubscriptionPage() {
             </div>
             <div className={`flex items-start gap-2 p-3 rounded-xl text-xs mb-5 ${dk('bg-blue-500/8 border border-blue-500/15 text-blue-300','bg-blue-50 border border-blue-200 text-blue-700')}`}>
               <Info size={12} className="flex-shrink-0 mt-0.5"/>
-              Ao confirmar, registamos o teu pedido. O plano fica activo ap\u00f3s verifica\u00e7\u00e3o manual pela equipa ZOMAR.
+              Ao confirmar, registamos o teu pedido. O plano fica activo após verificação manual pela equipa ZOMAR.
             </div>
             <button onClick={handleMobileRequest} className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all ${C[selPlan.color].btn}`}>
-              <CheckCircle size={15}/> J\u00e1 paguei \u2014 confirmar pedido
+              <CheckCircle size={15}/> Já paguei — confirmar pedido
             </button>
-            <p className={`text-center text-xs mt-2 ${dk('text-gray-600','text-gray-400')}`}>Activa\u00e7\u00e3o em at\u00e9 2 horas \u00b7 Suporte: zomarentregas@gmail.com</p>
+            <p className={`text-center text-xs mt-2 ${dk('text-gray-600','text-gray-400')}`}>Activação em até 2 horas · Suporte: zomarentregas@gmail.com</p>
           </div>
         </div>
       )}
@@ -414,8 +416,8 @@ export default function SubscriptionPage() {
       {step==='processing' && (
         <div className={`${card} py-16 text-center`}>
           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-blue-500/15','bg-blue-50')}`}><Loader2 size={28} className="text-blue-400 animate-spin"/></div>
-          <h3 className={`text-lg font-bold mb-2 ${dk('text-white','text-gray-900')}`}>{payMethod==='card'?'A redirecionar para pagamento\u2026':'A registar pedido\u2026'}</h3>
-          <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>{payMethod==='card'?'Ser\u00e1s redirecionado para o Stripe. N\u00e3o feches esta p\u00e1gina.':'A criar a tua subscri\u00e7\u00e3o\u2026'}</p>
+          <h3 className={`text-lg font-bold mb-2 ${dk('text-white','text-gray-900')}`}>{payMethod==='card'?'A redirecionar para pagamento…':'A registar pedido…'}</h3>
+          <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>{payMethod==='card'?'Serás redirecionado para o Stripe. Não feches esta página.':'A criar a tua subscrição…'}</p>
         </div>
       )}
 
@@ -424,8 +426,8 @@ export default function SubscriptionPage() {
         <div className={`${card} py-14 px-8 text-center`}>
           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-emerald-500/15','bg-emerald-50')}`}><CheckCircle size={28} className="text-emerald-400"/></div>
           {payMethod==='card'
-            ? <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Plano activado!</h3><p className={`text-sm mb-6 ${dk('text-gray-400','text-gray-500')}`}>O plano <strong>{selPlan.name}</strong> foi activado automaticamente. J\u00e1 podes criar entregas.</p></>
-            : <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Pedido registado!</h3><p className={`text-sm mb-3 ${dk('text-gray-400','text-gray-500')}`}>O pedido do plano <strong>{selPlan.name}</strong> foi registado.</p><div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs mb-6 ${dk('bg-orange-500/10 border border-orange-500/15 text-orange-300','bg-orange-50 border border-orange-200 text-orange-700')}`}><Clock size={11}/> A equipa activa em at\u00e9 2 horas ap\u00f3s confirmar o pagamento</div></>
+            ? <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Plano activado!</h3><p className={`text-sm mb-6 ${dk('text-gray-400','text-gray-500')}`}>O plano <strong>{selPlan.name}</strong> foi activado automaticamente. Já podes criar entregas.</p></>
+            : <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Pedido registado!</h3><p className={`text-sm mb-3 ${dk('text-gray-400','text-gray-500')}`}>O pedido do plano <strong>{selPlan.name}</strong> foi registado.</p><div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs mb-6 ${dk('bg-orange-500/10 border border-orange-500/15 text-orange-300','bg-orange-50 border border-orange-200 text-orange-700')}`}><Clock size={11}/> A equipa activa em até 2 horas após confirmar o pagamento</div></>
           }
           <div className="flex gap-3 justify-center">
             <button onClick={()=>setStep('plans')} className={`px-5 py-2.5 rounded-xl text-sm font-medium border ${dk('border-white/10 text-gray-300 hover:bg-white/5','border-gray-200 text-gray-600 hover:bg-gray-50')}`}>Ver planos</button>
