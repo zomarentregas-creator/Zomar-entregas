@@ -1,16 +1,14 @@
-import { supabase } from './supabase';
+import { supabase } from './supabase'
 
-export async function deleteAccount() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Não autenticado');
-
-  const { data, error } = await supabase.functions.invoke('delete-account', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
-
-  if (error) throw error;
-  return data;
+/** Elimina a conta do utilizador autenticado (edge function `delete-account`). */
+export async function deleteAccount(): Promise<void> {
+  const { error } = await supabase.functions.invoke('delete-account', { body: { confirm: 'ELIMINAR' } })
+  if (!error) return
+  let msg = 'Não foi possível eliminar a conta. Tente novamente.'
+  try {
+    const res = (error as { context?: Response }).context
+    const body = res && typeof res.json === 'function' ? await res.json() : null
+    if (body?.error) msg = String(body.error)
+  } catch { /* mantém a mensagem genérica */ }
+  throw new Error(msg)
 }

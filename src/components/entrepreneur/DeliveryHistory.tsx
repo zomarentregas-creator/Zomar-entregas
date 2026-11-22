@@ -102,7 +102,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
       const otherIds = [...new Set(
         list.map(d => isDeliverer ? d.entrepreneur_id : d.deliverer_id).filter(Boolean)
       )]
-      let nameMap: Record<string, string> = {}
+      const nameMap: Record<string, string> = {}
       if (otherIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles').select('user_id, full_name').in('user_id', otherIds)

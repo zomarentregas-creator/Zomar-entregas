@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth, UserRole } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { authLimiter } from '../lib/rateLimit'
 import { usePrefersReducedMotion, useParallax } from '../hooks/useMotion'
 import '../styles/zomar-motion.css'
 
@@ -181,6 +182,7 @@ export default function Login() {
     if (mode === 'forgot') return null
     if (password.length < 6) return 'A senha deve ter pelo menos 6 caracteres'
     if (mode === 'signup') {
+      if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return 'A senha deve ter pelo menos 8 caracteres, com letras e números'
       if (!fullName.trim()) return 'Nome completo é obrigatório'
       if (password !== confirmPassword) return 'As senhas não coincidem'
       if (userType === 'deliverer' && !phone) return 'Telefone é obrigatório para entregadores'
@@ -193,6 +195,11 @@ export default function Login() {
     setError(null)
     const validationError = validateForm()
     if (validationError) { setError(validationError); return }
+    const limitKey = `${mode}:${email.trim().toLowerCase()}`
+    if (!authLimiter.canProceed(limitKey)) {
+      setError(`Demasiadas tentativas. Aguarde ${Math.ceil(authLimiter.getTimeUntilReset(limitKey) / 1000)}s e tente de novo.`)
+      return
+    }
     setLocalLoading(true)
     try {
       if (mode === 'forgot') {

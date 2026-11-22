@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import SupportButton from '../shared/SupportButton';
 import '../../styles/zomar-motion.css';
-import '../../styles/zomar-nav.css';
+import '../../styles/zomar-nav.css'
+import '../../styles/zomar-theme.css'
+import Aurora from '../Common/Aurora';
 
 interface EntrepreneurLayoutProps { children: React.ReactNode }
 
@@ -144,7 +146,8 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${dk('bg-[#0a0a0a] text-white', 'bg-gray-50 text-gray-900')}`}>
+    <div className={`min-h-screen isolate transition-colors duration-300 ${dk('zt zm-dark bg-[#0a0f14] text-white', 'bg-gray-50 text-gray-900')}`}>
+      {isDarkMode && <Aurora />}
       <style>{styles}</style>
 
       {sidebarOpen && (

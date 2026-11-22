@@ -2,13 +2,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Package, MapPin, Clock, CheckCircle, AlertCircle,
-  RefreshCw, Loader2, ChevronRight, Truck, X,
+  MapPin, AlertCircle,
+  RefreshCw, Loader2, Truck, X,
   KeyRound, Eye, EyeOff, Phone,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { PageSkeleton, stagger } from '../Common/MotionKit'
+import ReportProblemModal from '../shared/ReportProblemModal'
 import '../../styles/zomar-nav.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,13 +33,15 @@ interface Delivery {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<string, { label: string; color: string; step: number }> = {
+  created:     { label: 'À espera de entregador', color: 'bg-gray-500/15 text-gray-300 border-gray-500/25',   step: 0 },
+  scheduled:   { label: 'Agendada',     color: 'bg-sky-500/15 text-sky-400 border-sky-500/25',            step: 0 },
   accepted:    { label: 'Aceite',       color: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25',   step: 1 },
   in_progress: { label: 'Em Andamento', color: 'bg-blue-500/15 text-blue-400 border-blue-500/25',         step: 2 },
   picked_up:   { label: 'Recolhido',    color: 'bg-purple-500/15 text-purple-400 border-purple-500/25',   step: 3 },
   problem:     { label: 'Problema',     color: 'bg-red-500/15 text-red-400 border-red-500/25',            step: 0 },
 }
 
-const ACTIVE_STATUSES = ['accepted', 'in_progress', 'picked_up', 'problem']
+const ACTIVE_STATUSES = ['created', 'scheduled', 'accepted', 'in_progress', 'picked_up', 'problem']
 
 const fmtMZN = (v: number) =>
   new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN', minimumFractionDigits: 0 }).format(v)
@@ -69,6 +72,7 @@ export default function ActiveDeliveries() {
   const [codeModal,  setCodeModal]  = useState<Delivery | null>(null)
   const [codeData,   setCodeData]   = useState<{ code: string; visible: boolean } | null>(null)
   const [codeLoading,setCodeLoading]= useState(false)
+  const [reportFor,  setReportFor]  = useState<string | null>(null)
 
   const dk = (dark: string, light: string) => isDarkMode ? dark : light
 
@@ -88,7 +92,7 @@ export default function ActiveDeliveries() {
 
       const list = data || []
       const dIds = [...new Set(list.map(d => d.deliverer_id).filter(Boolean))]
-      let dMap: Record<string, { full_name?: string; phone?: string }> = {}
+      const dMap: Record<string, { full_name?: string; phone?: string }> = {}
       if (dIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles').select('user_id, full_name, phone').in('user_id', dIds)
@@ -181,7 +185,7 @@ export default function ActiveDeliveries() {
 
       {/* Cards de entrega */}
       {deliveries.map((d, idx) => {
-        const sc  = STATUS_CFG[d.current_status] || STATUS_CFG.accepted
+        const sc  = STATUS_CFG[d.current_status] || STATUS_CFG.created
         const isProblem = d.current_status === 'problem'
 
         return (
@@ -270,6 +274,13 @@ export default function ActiveDeliveries() {
                     </span>
                   )}
                 </div>
+                <div className="flex items-center gap-2">
+                {!isProblem && (
+                  <button onClick={() => setReportFor(d.id)}
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all ${dk('bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20', 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200')}`}>
+                    <AlertCircle size={12}/> Problema
+                  </button>
+                )}
                 <button
                   onClick={() => handleViewCode(d)}
                   className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all ${
@@ -278,6 +289,7 @@ export default function ActiveDeliveries() {
                   }`}>
                   <KeyRound size={12}/> Ver código
                 </button>
+                </div>
               </div>
 
               {/* Alerta problema */}
@@ -293,6 +305,11 @@ export default function ActiveDeliveries() {
           </div>
         )
       })}
+
+      {reportFor && (
+        <ReportProblemModal deliveryId={reportFor} onClose={() => setReportFor(null)}
+          onReported={() => { setReportFor(null); load() }} />
+      )}
 
       {/* ── Modal: código de confirmação ── */}
       {codeModal && (

@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   Package, Truck, CheckCircle, XCircle, Clock, MapPin,
   DollarSign, Calendar, TrendingUp, Loader2, AlertCircle,
@@ -23,6 +23,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notifyEntrepreneur, notifyDeliverer } from '../../lib/Notificationservice'
 import { stagger } from '../Common/MotionKit'
+import ReportProblemModal from '../shared/ReportProblemModal'
 import '../../styles/zomar-nav.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,7 +75,6 @@ const fmtMZN = (v: number) =>
 
 export default function MyDeliveries() {
   const navigate  = useNavigate()
-  const location  = useLocation()
   const { user }  = useAuth()
 
   // ── Tema sincronizado com DelivererLayout ───────────────────────────────────
@@ -103,6 +103,7 @@ export default function MyDeliveries() {
 
   // ── Modal de código de confirmação ──
   const [codeModal,    setCodeModal]    = useState<{ deliveryId: string; mode: 'collect' | 'deliver' } | null>(null)
+  const [reportFor,    setReportFor]    = useState<string | null>(null)
   const [codeInput,    setCodeInput]    = useState('')
   const [codeError,    setCodeError]    = useState('')
   const [codeLoading,  setCodeLoading]  = useState(false)
@@ -291,6 +292,16 @@ export default function MyDeliveries() {
   // ── Verificar código de confirmação via RPC ────────────────────────────────
   const handleVerifyCode = async () => {
     if (!codeModal || !user) return
+    // Recolha — não precisa de código, só confirmar
+    if (codeModal.mode === 'collect') {
+      setCodeLoading(true)
+      try {
+        await updateDeliveryStatus(codeModal.deliveryId, 'in_progress')
+        setCodeModal(null)
+        setCodeInput('')
+      } finally { setCodeLoading(false) }
+      return
+    }
     if (codeInput.trim().length < 4) {
       setCodeError('Introduza o código completo.')
       return
@@ -298,13 +309,6 @@ export default function MyDeliveries() {
     setCodeLoading(true)
     setCodeError('')
     try {
-      if (codeModal.mode === 'collect') {
-        // Recolha — não precisa de código, só confirmar
-        await updateDeliveryStatus(codeModal.deliveryId, 'in_progress')
-        setCodeModal(null)
-        setCodeInput('')
-        return
-      }
       // Entrega — verificar código via RPC segura
       const { data, error } = await supabase.rpc('verify_delivery_code', {
         p_delivery_id:  codeModal.deliveryId,
@@ -714,6 +718,20 @@ export default function MyDeliveries() {
                                 Entregar
                               </button>
                             )}
+
+                            {/* Reportar problema */}
+                            {(delivery.current_status === 'accepted' || delivery.current_status === 'in_progress') && (
+                              <button
+                                onClick={() => setReportFor(delivery.id)}
+                                disabled={isActioning}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-50 ${
+                                  dk('bg-red-500/10 text-red-400 border-red-500/25 hover:bg-red-500/20', 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100')
+                                }`}
+                              >
+                                <AlertCircle size={12}/>
+                                Problema
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -822,6 +840,10 @@ export default function MyDeliveries() {
             </div>
           </div>
         </div>
+      )}
+      {reportFor && (
+        <ReportProblemModal deliveryId={reportFor} onClose={() => setReportFor(null)}
+          onReported={() => { setReportFor(null); setFeedback({ type: 'success', msg: 'Problema reportado. A equipa foi avisada.' }); loadMyDeliveries() }} />
       )}
     </div>
   )

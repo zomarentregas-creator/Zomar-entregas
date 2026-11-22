@@ -13,10 +13,12 @@ import {
   LogOut, AlertCircle, CheckCircle, Camera,
   Lock, Eye, EyeOff, ChevronRight, HelpCircle,
   DollarSign, Clock, Bell, Users2,
-  Upload, Trash2, Loader2,
+  Trash2,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import DeleteAccountModal from './DeleteAccountModal'
+import TwoFactorPanel from './TwoFactorPanel'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    TYPES
@@ -303,9 +305,12 @@ function buildCSS(dark: boolean): string {
 }
 
 function maskPhone(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 11)
-  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '')
-  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '')
+  // Formato moçambicano: +258 8X XXX XXXX
+  let d = v.replace(/\D/g, '')
+  if (d.startsWith('258')) d = d.slice(3)
+  d = d.slice(0, 9)
+  const parts = [d.slice(0, 2), d.slice(2, 5), d.slice(5, 9)].filter(Boolean)
+  return d ? `+258 ${parts.join(' ')}` : ''
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -536,6 +541,12 @@ export default function Profile() {
   }
 
   const handleLogout = async () => { try { await signOut() } finally { navigate('/login') } }
+  const handleLogoutEverywhere = async () => {
+    try { await supabase.auth.signOut({ scope: 'global' }) } catch { /* continua para o login */ }
+    try { await signOut() } finally { navigate('/login') }
+  }
+  const [showDelete, setShowDelete] = useState(false)
+  const hasPassword = (user as any)?.app_metadata?.provider !== 'google'
 
   const initial        = (profile?.full_name || user?.email || '?').charAt(0).toUpperCase()
   const isDeliverer    = profile?.role === 'deliverer'
@@ -747,7 +758,7 @@ export default function Profile() {
                 <div className="dp-field">
                   <label className="dp-label">Telefone</label>
                   <div className="dp-wrap"><Phone className="dp-ico" size={13}/>
-                    <input className="dp-input" type="tel" value={phone} onChange={e => setPhone(maskPhone(e.target.value))} disabled={!editing} placeholder="(11) 99999-9999"/>
+                    <input className="dp-input" type="tel" value={phone} onChange={e => setPhone(maskPhone(e.target.value))} disabled={!editing} placeholder="+258 84 123 4567"/>
                   </div>
                 </div>
                 <div className="dp-field full">
@@ -816,7 +827,11 @@ export default function Profile() {
                 <div className="dp-danger-title">⚠ Zona de Perigo</div>
                 <div className="dp-danger-row">
                   <div className="dp-danger-desc">Terminar sessão em todos os dispositivos</div>
-                  <button className="dp-btn dp-btn-danger dp-btn-sm" onClick={handleLogout}><LogOut size={12}/>Sair</button>
+                  <button className="dp-btn dp-btn-danger dp-btn-sm" onClick={handleLogoutEverywhere}><LogOut size={12}/>Sair</button>
+                </div>
+                <div className="dp-danger-row">
+                  <div className="dp-danger-desc">Eliminar a conta e os dados pessoais</div>
+                  <button className="dp-btn dp-btn-danger dp-btn-sm" onClick={() => setShowDelete(true)}><Trash2 size={12}/>Eliminar</button>
                 </div>
               </div>
             </div>
@@ -996,7 +1011,10 @@ export default function Profile() {
               <div className="dp-panel">
                 <div className="dp-ptitle"><Shield size={13}/>Status</div>
                 <div className="dp-srow"><div className="dp-srow-l"><CheckCircle size={13} style={{color:'var(--em)'}}/>E-mail verificado</div><div className="dp-srow-v g">Sim</div></div>
-                <div className="dp-srow"><div className="dp-srow-l"><Lock size={13} style={{color:'var(--text3)'}}/>2FA</div><div className="dp-srow-v" style={{color:'var(--text3)'}}>Em breve</div></div>
+                </div>
+              <div className="dp-panel">
+                <div className="dp-ptitle"><Lock size={13}/>Dois passos (2FA)</div>
+                <TwoFactorPanel/>
               </div>
             </div>
           </div>
@@ -1034,13 +1052,18 @@ export default function Profile() {
                 <p style={{fontSize:13, color:'var(--text2)', marginBottom:14, lineHeight:1.6}}>
                   Tem dúvidas? A nossa equipa está disponível.
                 </p>
-                <button className="dp-btn dp-btn-ghost dp-btn-full" onClick={() => window.open('mailto:zomarentregas@gmail.com','_blank')}><Mail size={13}/>Enviar E-mail</button>
-                <button className="dp-btn dp-btn-ghost dp-btn-full" style={{marginTop:8}} onClick={() => window.open('https://wa.me/258842589799','_blank')}><Phone size={13}/>WhatsApp</button>
+                <button className="dp-btn dp-btn-ghost dp-btn-full" onClick={() => window.open('https://mail.google.com/mail/?view=cm&fs=1&to=zomarentregas%40gmail.com&su=Suporte%20ZOMAR','_blank','noopener,noreferrer')}><Mail size={13}/>Enviar E-mail</button>
+                <button className="dp-btn dp-btn-ghost dp-btn-full" style={{marginTop:8}} onClick={() => window.open('https://wa.me/258842589799','_blank','noopener,noreferrer')}><Phone size={13}/>WhatsApp</button>
               </div>
             </div>
           </div>
         )}
 
+        {showDelete && (
+          <DeleteAccountModal userEmail={user?.email || ''} requirePassword={hasPassword}
+            onClose={() => setShowDelete(false)}
+            onDeleted={async () => { try { await signOut() } finally { navigate('/login', { replace: true }) } }} />
+        )}
       </div>
     </>
   )

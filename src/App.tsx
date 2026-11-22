@@ -1,8 +1,9 @@
 // src/App.tsx
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Loader from './components/Common/Loader'
+import MfaGate from './components/Auth/MfaGate'
 import DeliveryDetails from './components/Common/Deliverydetails'
 import Login from './pages/LoginPremium'
 import AuthCallback from './pages/AuthCallback'
@@ -29,6 +30,7 @@ import AdminUsers from './pages/admin/AdminUsers'
 import AdminDeliveries from './pages/admin/AdminDeliveries'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminSubscriptions from './pages/Adminsubscriptions'
+import AdminWithdrawals from './pages/admin/AdminWithdrawals'
 import AdminActivityLog from './pages/admin/AdminActivityLog'
 import AdminBroadcast from './pages/admin/AdminBroadcast'
 
@@ -214,91 +216,33 @@ const RoleGuard = () => {
   return <Navigate to="/role-selection" replace />
 }
 
-const EntrepreneurGuard = () => {
-  const { user, loading, isAuthenticated } = useAuth()
-  if (loading) return <Loader />
-  if (!isAuthenticated || !user) return <Navigate to="/login" replace />
-  if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />
-  if (user.role !== 'entrepreneur') return <Navigate to="/deliverer/dashboard" replace />
-  return null
+type AppRole = 'entrepreneur' | 'deliverer' | 'admin'
+
+const HOME: Record<AppRole, string> = {
+  entrepreneur: '/entrepreneur/overview',
+  deliverer: '/deliverer/dashboard',
+  admin: '/admin/dashboard',
 }
 
-const DelivererGuard = () => {
+/** Só renderiza as rotas filhas se o utilizador tiver o papel certo (nada é montado antes). */
+const RequireRole = ({ role }: { role: AppRole }) => {
   const { user, loading, isAuthenticated } = useAuth()
   if (loading) return <Loader />
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />
-  if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />
-  if (user.role !== 'deliverer') return <Navigate to="/entrepreneur/overview" replace />
-  return null
-}
-
-const AdminGuard = () => {
-  const { user, loading, isAuthenticated } = useAuth()
-  if (loading) return <Loader />
-  if (!isAuthenticated || !user) return <Navigate to="/login" replace />
-  if (user.role !== 'admin') return <Navigate to="/" replace />
-  return null
+  const current = user.role as AppRole | null | undefined
+  if (!current) return <Navigate to="/role-selection" replace />
+  if (current !== role) return <Navigate to={HOME[current] ?? '/login'} replace />
+  return <MfaGate><Outlet /></MfaGate>
 }
 
 // ─── Rotas do Empreendedor ────────────────────────────────────────────────────
 
-const EntrepreneurRoutes = () => (
-  <EntrepreneurLayout>
-    <Routes>
-      <Route index element={<Navigate to="overview" replace />} />
-      <Route path="dashboard" element={<Navigate to="/entrepreneur/overview" replace />} />
-      <Route path="overview" element={<Overview />} />
-      <Route path="active-deliveries" element={<ActiveDeliveries deliveries={[]} onReportProblem={() => {}} onViewDetails={() => {}} />} />
-      <Route path="new-delivery" element={<NewDelivery />} />
-      <Route path="delivery-history" element={<DeliveryHistory deliveries={[]} />} />
-      <Route path="subscription" element={<SubscriptionPage />} />
-      <Route path="profile" element={<Profile />} />
-      <Route path="notifications" element={<Notifications />} />
-      <Route path="settings" element={<Settings />} />
-      <Route path="help" element={<HelpPage />} />
-      <Route path="terms" element={<TermsPage />} />
-      <Route path="delivery/:id" element={<DeliveryDetails />} />
-      <Route path="*" element={<Navigate to="/entrepreneur/overview" replace />} />
-    </Routes>
-  </EntrepreneurLayout>
+const EntrepreneurShell = () => (
+  <EntrepreneurLayout><Outlet /></EntrepreneurLayout>
 )
 
-// ─── Rotas do Entregador ──────────────────────────────────────────────────────
-
-const DelivererRoutes = () => (
-  <DelivererLayout>
-    <Routes>
-      <Route index element={<DelivererDashboard />} />
-      <Route path="dashboard" element={<DelivererDashboard />} />
-      <Route path="available-deliveries" element={<AvailableDeliveries />} />
-      <Route path="my-deliveries" element={<MyDeliveries />} />
-      <Route path="earnings" element={<Earnings />} />
-      <Route path="history" element={<DeliveryHistory deliveries={[]} />} />
-      <Route path="profile" element={<DelivererProfile />} />
-      <Route path="notifications" element={<Notifications />} />
-      <Route path="settings" element={<Settings />} />
-      <Route path="help" element={<HelpPage />} />
-      <Route path="terms" element={<TermsPage />} />
-      <Route path="delivery/:id" element={<DeliveryDetails />} />
-      <Route path="*" element={<Navigate to="/deliverer/dashboard" replace />} />
-    </Routes>
-  </DelivererLayout>
-)
-
-// ─── Rotas do Admin ───────────────────────────────────────────────────────────
-
-const AdminRoutes = () => (
-  <Routes>
-    <Route index element={<AdminDashboard />} />
-    <Route path="dashboard" element={<AdminDashboard />} />
-    <Route path="users" element={<AdminUsers />} />
-    <Route path="deliveries" element={<AdminDeliveries />} />
-    <Route path="subscriptions" element={<AdminSubscriptions />} />
-    <Route path="broadcast" element={<AdminBroadcast />} />
-    <Route path="activity-log" element={<AdminActivityLog />} />
-    <Route path="settings" element={<AdminSettings />} />
-    <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-  </Routes>
+const DelivererShell = () => (
+  <DelivererLayout><Outlet /></DelivererLayout>
 )
 
 // ─── App Principal ────────────────────────────────────────────────────────────
@@ -323,22 +267,59 @@ export default function App() {
         <Route path="/" element={<RoleGuard />} />
 
         {/* Área do Empreendedor */}
-        <Route
-          path="/entrepreneur/*"
-          element={<><EntrepreneurGuard /><EntrepreneurRoutes /></>}
-        />
+        <Route element={<RequireRole role="entrepreneur" />}>
+          <Route path="/entrepreneur" element={<EntrepreneurShell />}>
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="dashboard" element={<Navigate to="/entrepreneur/overview" replace />} />
+            <Route path="overview" element={<Overview />} />
+            <Route path="active-deliveries" element={<ActiveDeliveries />} />
+            <Route path="new-delivery" element={<NewDelivery />} />
+            <Route path="delivery-history" element={<DeliveryHistory />} />
+            <Route path="subscription" element={<SubscriptionPage />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="delivery/:id" element={<DeliveryDetails />} />
+            <Route path="*" element={<Navigate to="/entrepreneur/overview" replace />} />
+          </Route>
+        </Route>
 
         {/* Área do Entregador */}
-        <Route
-          path="/deliverer/*"
-          element={<><DelivererGuard /><DelivererRoutes /></>}
-        />
+        <Route element={<RequireRole role="deliverer" />}>
+          <Route path="/deliverer" element={<DelivererShell />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DelivererDashboard />} />
+            <Route path="available-deliveries" element={<AvailableDeliveries />} />
+            <Route path="my-deliveries" element={<MyDeliveries />} />
+            <Route path="earnings" element={<Earnings />} />
+            <Route path="history" element={<DeliveryHistory />} />
+            <Route path="profile" element={<DelivererProfile />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="delivery/:id" element={<DeliveryDetails />} />
+            <Route path="*" element={<Navigate to="/deliverer/dashboard" replace />} />
+          </Route>
+        </Route>
 
         {/* Área Admin */}
-        <Route
-          path="/admin/*"
-          element={<><AdminGuard /><AdminRoutes /></>}
-        />
+        <Route element={<RequireRole role="admin" />}>
+          <Route path="/admin">
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="deliveries" element={<AdminDeliveries />} />
+            <Route path="subscriptions" element={<AdminSubscriptions />} />
+            <Route path="withdrawals" element={<AdminWithdrawals />} />
+            <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="activity-log" element={<AdminActivityLog />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+          </Route>
+        </Route>
 
         {/* 404 */}
         <Route

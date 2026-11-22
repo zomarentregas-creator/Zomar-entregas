@@ -34,31 +34,6 @@ export interface AppNotification {
   created_at:  string
 }
 
-// ─── Templates ────────────────────────────────────────────────────────────────
-
-const TEMPLATES: Record<string, (d: Record<string, string>) => { title: string; message: string }> = {
-  delivery_accepted: d => ({
-    title:   '🚚 Entrega aceite',
-    message: `${d.deliverer_name || 'Um entregador'} aceitou a tua entrega "${d.item_type || 'item'}".`,
-  }),
-  delivery_picked_up: d => ({
-    title:   '📦 Item recolhido',
-    message: `${d.deliverer_name || 'O entregador'} recolheu "${d.item_type || 'item'}" e está em rota.`,
-  }),
-  delivery_completed: d => ({
-    title:   '✅ Entrega concluída!',
-    message: `A entrega "${d.item_type || 'item'}" foi concluída com sucesso.`,
-  }),
-  delivery_cancelled: d => ({
-    title:   '❌ Entrega cancelada',
-    message: `A entrega "${d.item_type || 'item'}" foi cancelada.`,
-  }),
-  delivery_problem: d => ({
-    title:   '⚠️ Problema na entrega',
-    message: `Problema na entrega "${d.item_type || 'item'}". ${d.reason || 'Contacta o suporte.'}`,
-  }),
-}
-
 // ─── Funções principais ───────────────────────────────────────────────────────
 
 /**
@@ -87,92 +62,23 @@ export async function createNotification(params: {
 }
 
 /**
- * Notifica o empreendedor de uma entrega.
- * Sem FK joins — usa duas queries separadas.
+ * As notificações de ciclo de vida da entrega (aceite, recolhida, concluída,
+ * cancelada, problema) são criadas no servidor por `notify_delivery_events`.
+ * Estas funções mantêm-se por compatibilidade mas já não fazem nada: criar a
+ * notificação aqui duplicava a do servidor (e a RLS impede escrever para
+ * outros utilizadores).
  */
 export async function notifyEntrepreneur(
-  deliveryId: string,
-  type: NotificationType,
-  extraData: Record<string, string> = {}
-): Promise<void> {
-  try {
-    // Query 1: dados da entrega
-    const { data: delivery } = await supabase
-      .from('deliveries')
-      .select('entrepreneur_id, deliverer_id, item_type')
-      .eq('id', deliveryId)
-      .single()
+  _deliveryId: string,
+  _type: NotificationType,
+  _extraData: Record<string, string> = {}
+): Promise<void> { /* feito pelo trigger */ }
 
-    if (!delivery?.entrepreneur_id) return
-
-    // Query 2: nome do entregador (se existir)
-    let delivererName = 'O entregador'
-    if (delivery.deliverer_id) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', delivery.deliverer_id)
-        .single()
-      if (profile?.full_name) delivererName = profile.full_name
-    }
-
-    const template = TEMPLATES[type]
-    if (!template) return
-
-    const { title, message } = template({
-      item_type:      delivery.item_type || 'item',
-      deliverer_name: delivererName,
-      ...extraData,
-    })
-
-    await createNotification({
-      userId:     delivery.entrepreneur_id,
-      type:       type.replace('delivery_', ''),
-      title,
-      message,
-      deliveryId,
-    })
-  } catch (e) {
-    console.warn('[Notify] notifyEntrepreneur falhou:', e)
-  }
-}
-
-/**
- * Notifica o entregador de uma entrega.
- */
 export async function notifyDeliverer(
-  deliveryId: string,
-  type: NotificationType,
-  extraData: Record<string, string> = {}
-): Promise<void> {
-  try {
-    const { data: delivery } = await supabase
-      .from('deliveries')
-      .select('deliverer_id, entrepreneur_id, item_type')
-      .eq('id', deliveryId)
-      .single()
-
-    if (!delivery?.deliverer_id) return
-
-    const template = TEMPLATES[type]
-    if (!template) return
-
-    const { title, message } = template({
-      item_type: delivery.item_type || 'item',
-      ...extraData,
-    })
-
-    await createNotification({
-      userId:     delivery.deliverer_id,
-      type:       type.replace('delivery_', ''),
-      title,
-      message,
-      deliveryId,
-    })
-  } catch (e) {
-    console.warn('[Notify] notifyDeliverer falhou:', e)
-  }
-}
+  _deliveryId: string,
+  _type: NotificationType,
+  _extraData: Record<string, string> = {}
+): Promise<void> { /* feito pelo trigger */ }
 
 /**
  * Marca uma notificação como lida.

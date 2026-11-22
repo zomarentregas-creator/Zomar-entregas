@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
     event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret)
   } catch (err: any) {
     console.error('[webhook] Assinatura inválida:', err.message)
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+    return new Response('Webhook Error', { status: 400 })
   }
 
   console.log(`[webhook] ${event.type} | ${event.id}`)
@@ -263,7 +263,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (err: any) {
     console.error(`[webhook] Erro no evento ${event.type}:`, err)
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: 'Erro interno' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })

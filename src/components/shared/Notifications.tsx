@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
-  Bell, CheckCircle, Package, AlertCircle, Info,
+  Bell, Package, AlertCircle, Info,
   Zap, RefreshCw, Loader2, X, Check, Trash2,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -10,16 +10,6 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useNotifications } from '../../hooks/useNotifications'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Notification {
-  id:          string
-  title:       string
-  message:     string
-  type:        string   // 'delivery' | 'alert' | 'system' | 'warning' | 'payment'
-  read:        boolean
-  delivery_id: string | null
-  created_at:  string
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -34,13 +24,26 @@ const TYPE_CFG: Record<string, {
   warning:  { icon: <AlertCircle size={15}/>,  color: d => d ? 'text-yellow-400'  : 'text-yellow-600',  bg: d => d ? 'bg-yellow-500/15'  : 'bg-yellow-50'  },
   payment:  { icon: <Zap size={15}/>,          color: d => d ? 'text-emerald-400' : 'text-emerald-600', bg: d => d ? 'bg-emerald-500/15' : 'bg-emerald-50' },
   info:     { icon: <Info size={15}/>,         color: d => d ? 'text-blue-400'    : 'text-blue-600',    bg: d => d ? 'bg-blue-500/15'    : 'bg-blue-50'    },
+  success:  { icon: <Zap size={15}/>,          color: d => d ? 'text-emerald-400' : 'text-emerald-600', bg: d => d ? 'bg-emerald-500/15' : 'bg-emerald-50' },
+  error:    { icon: <AlertCircle size={15}/>,  color: d => d ? 'text-red-400'     : 'text-red-600',     bg: d => d ? 'bg-red-500/15'     : 'bg-red-50'     },
 }
+// Tipos criados pelo servidor (triggers e RPCs) reutilizam as configurações acima
+TYPE_CFG.delivery_status     = TYPE_CFG.delivery
+TYPE_CFG.delivery_accepted   = TYPE_CFG.delivery
+TYPE_CFG.delivery_picked_up  = TYPE_CFG.delivery
+TYPE_CFG.delivery_completed  = TYPE_CFG.success
+TYPE_CFG.delivery_cancelled  = TYPE_CFG.warning
+TYPE_CFG.delivery_problem    = TYPE_CFG.alert
+TYPE_CFG.withdrawal_status   = TYPE_CFG.payment
+TYPE_CFG.withdrawal_approved = TYPE_CFG.success
+TYPE_CFG.withdrawal_rejected = TYPE_CFG.error
+TYPE_CFG.achievement         = TYPE_CFG.success
 
-const fallbackCfg = (d: boolean) => ({
+const FALLBACK_CFG = {
   icon:  <Bell size={15}/>,
-  color: d ? 'text-gray-400' : 'text-gray-500',
-  bg:    d ? 'bg-white/8'    : 'bg-gray-100',
-})
+  color: (d: boolean) => (d ? 'text-gray-400' : 'text-gray-500'),
+  bg:    (d: boolean) => (d ? 'bg-white/8'    : 'bg-gray-100'),
+}
 
 const fmtRelative = (s: string) => {
   const diff = Date.now() - new Date(s).getTime()
@@ -196,7 +199,7 @@ export default function Notifications() {
       ) : (
         <div className="space-y-2">
           {visible.map((n, i) => {
-            const cfg = TYPE_CFG[n.type] || { icon: <Bell size={15}/>, color: () => '', bg: () => '' }
+            const cfg = TYPE_CFG[n.type] || FALLBACK_CFG
             const typedCfg = 'color' in cfg && typeof cfg.color === 'function' ? cfg : {
               icon: cfg.icon,
               color: (_: boolean) => dk('text-gray-400', 'text-gray-500'),
