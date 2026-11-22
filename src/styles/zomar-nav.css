@@ -1,0 +1,75 @@
+/* ============================================================================
+   ZOMAR — NAVEGAÇÃO E COMPONENTES PARTILHADOS (zn-*)
+   Complementa zomar-motion.css (classes zm-*). Só anima opacity/transform.
+   Respeita "reduzir movimento".
+   ========================================================================== */
+
+/* Fundo escuro que aparece com fade (menu lateral em mobile, modais) */
+.zn-fade { animation: zn-fade 0.3s var(--zm-ease-soft, ease) backwards; }
+@keyframes zn-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Menus suspensos (notificações, utilizador): abrem a partir do canto */
+.zn-menu { transform-origin: top right; animation: zn-menu 0.22s var(--zm-ease, ease) backwards; }
+@keyframes zn-menu {
+  from { opacity: 0; transform: translate3d(0, -6px, 0) scale(0.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Indicador deslizante da barra inferior */
+.zn-tab-indicator { transition: transform 0.5s var(--zm-ease, ease), opacity 0.3s var(--zm-ease-soft, ease); will-change: transform; }
+
+/* Brilho suave por trás do separador activo */
+.zn-tab-glow {
+  position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none;
+  background: radial-gradient(60% 70% at 50% 0%, rgba(16, 185, 129, 0.16), transparent 70%);
+  animation: zn-fade 0.5s var(--zm-ease-soft, ease) backwards;
+}
+
+/* Ícone do separador activo salta ao entrar */
+.zn-tab-pop { animation: zn-tab-pop 0.55s var(--zm-ease, ease) backwards; }
+@keyframes zn-tab-pop {
+  0% { transform: translate3d(0, 4px, 0) scale(0.85); }
+  55% { transform: translate3d(0, -3px, 0) scale(1.12); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Barra lateral: marcador do item activo */
+.zn-nav-mark {
+  position: absolute; left: 0; top: 50%; height: 20px; width: 3px; margin-top: -10px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #34d399, #10b981);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+  animation: zn-mark 0.4s var(--zm-ease, ease) backwards;
+}
+@keyframes zn-mark { from { opacity: 0; transform: scaleY(0.2); } to { opacity: 1; transform: scaleY(1); } }
+
+/* Título do cabeçalho que muda de página */
+.zn-title { animation: zn-title 0.45s var(--zm-ease, ease) backwards; }
+@keyframes zn-title { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+
+/* Crachá de notificações com anel que pulsa por trás do número */
+.zn-badge { isolation: isolate; }
+.zn-badge::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: inherit;
+  animation: zm-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Barras de gráfico que crescem de baixo para cima */
+.zn-bar { transform-origin: bottom; animation: zn-bar 0.9s var(--zm-ease, ease) backwards; animation-delay: var(--zm-d, 0ms); }
+@keyframes zn-bar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* Janelas (modais): o painel sobe com leveza */
+.zn-modal { animation: zn-modal 0.35s var(--zm-ease, ease) backwards; }
+@keyframes zn-modal {
+  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Linhas de tabela: só opacidade (transform em <tr> não é fiável) */
+.zn-row { animation: zn-fade 0.5s var(--zm-ease-soft, ease) backwards; animation-delay: var(--zm-d, 0ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  .zn-fade, .zn-menu, .zn-tab-glow, .zn-tab-pop, .zn-nav-mark, .zn-title,
+  .zn-badge::after, .zn-bar, .zn-modal, .zn-row { animation: none !important; }
+  .zn-tab-indicator { transition: none; }
+}
