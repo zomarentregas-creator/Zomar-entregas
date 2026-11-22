@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { stagger } from '../Common/MotionKit'
+import '../../styles/zomar-nav.css'
 import { notifyEntrepreneur } from '../../lib/Notificationservice'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -262,7 +264,7 @@ export default function AvailableDeliveries() {
       {loading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className={`${card} h-28 animate-pulse`}/>
+            <div key={i} className={`zm-skeleton ${dk('', 'is-light')} h-28 rounded-2xl`}/>
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -286,8 +288,8 @@ export default function AvailableDeliveries() {
             const isAccepting = accepting === d.id
             return (
               <div key={d.id}
-                style={{ animationDelay: `${i * 30}ms` }}
-                className={`${card} p-4 hover:border-emerald-500/25`}
+                style={stagger(i, 60)}
+                className={`${card} zm-swap p-4 hover:border-emerald-500/25`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -350,7 +352,7 @@ export default function AvailableDeliveries() {
                   onClick={() => setConfirmModal(d)}
                   disabled={isAccepting}
                   className={`mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 ${
-                    dk('bg-emerald-500 hover:bg-emerald-400 text-black', 'bg-emerald-600 hover:bg-emerald-700 text-white')
+                    dk('zm-press zm-sheen bg-emerald-500 hover:bg-emerald-400 text-black', 'zm-press zm-sheen bg-emerald-600 hover:bg-emerald-700 text-white')
                   }`}
                 >
                   {isAccepting
@@ -366,8 +368,8 @@ export default function AvailableDeliveries() {
 
       {/* ── Modal de confirmação de aceitação ── */}
       {confirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`w-full max-w-sm rounded-2xl border p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
+        <div className="zn-fade fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`zn-modal w-full max-w-sm rounded-2xl border p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 ${dk('bg-emerald-500/15', 'bg-emerald-50')}`}>
               <Truck size={22} className="text-emerald-400"/>
             </div>
@@ -417,7 +419,7 @@ export default function AvailableDeliveries() {
                 onClick={() => handleAccept(confirmModal)}
                 disabled={!!accepting}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${
-                  dk('bg-emerald-500 hover:bg-emerald-400 text-black', 'bg-emerald-600 hover:bg-emerald-700 text-white')
+                  dk('zm-press zm-sheen bg-emerald-500 hover:bg-emerald-400 text-black', 'zm-press zm-sheen bg-emerald-600 hover:bg-emerald-700 text-white')
                 }`}>
                 {accepting ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle size={14}/>}
                 Aceitar
@@ -429,8 +431,8 @@ export default function AvailableDeliveries() {
 
       {/* ── Modal pós-aceitação: instruções do código ── */}
       {codeModal?.accepted && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`w-full max-w-sm rounded-2xl border p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
+        <div className="zn-fade fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`zn-modal w-full max-w-sm rounded-2xl border p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 ${dk('bg-emerald-500/15', 'bg-emerald-50')}`}>
               <ShieldCheck size={22} className="text-emerald-400"/>
             </div>
@@ -469,7 +471,7 @@ export default function AvailableDeliveries() {
               <button
                 onClick={() => { setCodeModal(null); navigate('/deliverer/my-deliveries') }}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 ${
-                  dk('bg-emerald-500 hover:bg-emerald-400 text-black', 'bg-emerald-600 hover:bg-emerald-700 text-white')
+                  dk('zm-press zm-sheen bg-emerald-500 hover:bg-emerald-400 text-black', 'zm-press zm-sheen bg-emerald-600 hover:bg-emerald-700 text-white')
                 }`}>
                 <Truck size={14}/> Ir para as minhas
               </button>
