@@ -3,11 +3,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DollarSign, TrendingUp, Package, Calendar,
-  ChevronDown, RefreshCw, Loader2, CheckCircle,
+  ChevronDown, RefreshCw, CheckCircle,
   ChevronLeft, ChevronRight, BarChart3,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { AnimatedNumber, PageSkeleton, stagger } from '../Common/MotionKit'
+import { spotlight } from '../../hooks/useMotion'
+import '../../styles/zomar-nav.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,11 +155,7 @@ export default function Earnings() {
   const card = `rounded-2xl border ${dk('bg-[#1a1a1a] border-white/8', 'bg-white border-gray-200 shadow-sm')}`
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div className="min-h-[40vh] flex items-center justify-center">
-      <Loader2 className={`animate-spin ${dk('text-emerald-400', 'text-emerald-600')}`} size={32}/>
-    </div>
-  )
+  if (loading) return <PageSkeleton dark={isDarkMode} rows={2} />
 
   return (
     <div className="space-y-5">
@@ -170,7 +169,7 @@ export default function Earnings() {
           </p>
         </div>
         <button onClick={load}
-          className={`p-2.5 rounded-xl ${dk('bg-white/5 hover:bg-white/10 text-gray-400', 'bg-gray-100 hover:bg-gray-200 text-gray-500')}`}>
+          className={`zm-press p-2.5 rounded-xl ${dk('bg-white/5 hover:bg-white/10 text-gray-400', 'bg-gray-100 hover:bg-gray-200 text-gray-500')}`}>
           <RefreshCw size={16}/>
         </button>
       </div>
@@ -182,7 +181,7 @@ export default function Earnings() {
             onClick={() => setPeriod(p)}
             className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               period === p
-                ? dk('bg-emerald-500 text-black', 'bg-emerald-600 text-white')
+                ? dk('zm-press zm-sheen bg-emerald-500 text-black', 'zm-press zm-sheen bg-emerald-600 text-white')
                 : dk('text-gray-400 hover:bg-white/5', 'text-gray-500 hover:bg-gray-50')
             }`}>
             {p === 'week' ? '7 dias' : p === 'month' ? '30 dias' : '12 meses'}
@@ -194,14 +193,14 @@ export default function Earnings() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Ganhos',    value: fmtMZN(stats.total),  icon: DollarSign,  color: dk('text-emerald-400', 'text-emerald-600'), bg: dk('bg-emerald-500/10', 'bg-emerald-50') },
-            { label: 'Entregas',  value: stats.count.toString(), icon: Package,    color: dk('text-blue-400',    'text-blue-600'),    bg: dk('bg-blue-500/10',    'bg-blue-50')    },
-            { label: 'Média',     value: fmtMZN(stats.avg),    icon: TrendingUp,  color: dk('text-purple-400',  'text-purple-600'),  bg: dk('bg-purple-500/10',  'bg-purple-50')  },
-            { label: 'Melhor',    value: fmtMZN(stats.best),   icon: BarChart3,   color: dk('text-yellow-400',  'text-yellow-600'),  bg: dk('bg-yellow-500/10',  'bg-yellow-50')  },
-          ].map(k => {
+            { label: 'Ganhos',    value: <AnimatedNumber value={stats.total} format={fmtMZN}/>,  icon: DollarSign,  color: dk('text-emerald-400', 'text-emerald-600'), bg: dk('bg-emerald-500/10', 'bg-emerald-50') },
+            { label: 'Entregas',  value: <AnimatedNumber value={stats.count}/>, icon: Package,    color: dk('text-blue-400',    'text-blue-600'),    bg: dk('bg-blue-500/10',    'bg-blue-50')    },
+            { label: 'Média',     value: <AnimatedNumber value={stats.avg} format={fmtMZN}/>,    icon: TrendingUp,  color: dk('text-purple-400',  'text-purple-600'),  bg: dk('bg-purple-500/10',  'bg-purple-50')  },
+            { label: 'Melhor',    value: <AnimatedNumber value={stats.best} format={fmtMZN}/>,   icon: BarChart3,   color: dk('text-yellow-400',  'text-yellow-600'),  bg: dk('bg-yellow-500/10',  'bg-yellow-50')  },
+          ].map((k, idx) => {
             const Icon = k.icon
             return (
-              <div key={k.label} className={`${card} p-4`}>
+              <div key={k.label} onPointerMove={spotlight} style={stagger(idx, 70)} className={`${card} zm-spot zm-lift zm-swap p-4`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${k.bg}`}>
                   <Icon size={16} className={k.color}/>
                 </div>
@@ -225,8 +224,8 @@ export default function Earnings() {
               <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
                 <div className="w-full relative flex items-end justify-center" style={{ height: '80px' }}>
                   <div
-                    className={`w-full rounded-t-lg transition-all duration-500 ${bar.val > 0 ? dk('bg-emerald-500/60 group-hover:bg-emerald-500', 'bg-emerald-400 group-hover:bg-emerald-500') : dk('bg-white/5', 'bg-gray-100')}`}
-                    style={{ height: `${Math.max(bar.pct, bar.val > 0 ? 4 : 2)}%` }}
+                    className={`zn-bar w-full rounded-t-lg transition-all duration-500 ${bar.val > 0 ? dk('bg-emerald-500/60 group-hover:bg-emerald-500', 'bg-emerald-400 group-hover:bg-emerald-500') : dk('bg-white/5', 'bg-gray-100')}`}
+                    style={{ height: `${Math.max(bar.pct, bar.val > 0 ? 4 : 2)}%`, ...stagger(i, 30, 150) }}
                     title={`${bar.label}: ${fmtMZN(bar.val)}`}
                   />
                 </div>
@@ -262,8 +261,8 @@ export default function Earnings() {
                 const fee = calcFee(e.estimated_value)
                 return (
                   <div key={e.id}
-                    style={{ animationDelay: `${i * 15}ms` }}
-                    className={`px-5 py-4 flex items-center gap-4 ${dk('hover:bg-white/2', 'hover:bg-gray-50/70')}`}>
+                    style={stagger(i, 45, 80)}
+                    className={`zm-swap px-5 py-4 flex items-center gap-4 ${dk('hover:bg-white/2', 'hover:bg-gray-50/70')}`}>
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${dk('bg-emerald-500/15', 'bg-emerald-50')}`}>
                       <CheckCircle size={16} className="text-emerald-400"/>
                     </div>
