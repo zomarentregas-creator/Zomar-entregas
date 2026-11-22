@@ -22,6 +22,8 @@ import {
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notifyEntrepreneur, notifyDeliverer } from '../../lib/Notificationservice'
+import { stagger } from '../Common/MotionKit'
+import '../../styles/zomar-nav.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -441,10 +443,11 @@ export default function MyDeliveries() {
               color: 'text-yellow-400',
               bg: dk('bg-yellow-500/20', 'bg-yellow-100'),
             },
-          ].map(({ label, value, Icon, color, bg }) => (
+          ].map(({ label, value, Icon, color, bg }, idx) => (
             <div
               key={label}
-              className={`rounded-xl p-4 flex items-center justify-between border ${
+              style={stagger(idx, 70)}
+              className={`zm-swap zm-lift rounded-xl p-4 flex items-center justify-between border ${
                 dk('bg-white/5 border-white/10', 'bg-white border-gray-200 shadow-sm')
               }`}
             >
@@ -567,10 +570,10 @@ export default function MyDeliveries() {
 
         {/* Tabela */}
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${
-              dk('border-emerald-500', 'border-emerald-600')
-            }`} />
+          <div className="space-y-3 p-4" aria-busy="true" aria-label="A carregar">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className={`zm-skeleton ${dk('', 'is-light')} h-14 rounded-xl`} />
+            ))}
           </div>
         ) : filteredDeliveries.length === 0 ? (
           <div className={`rounded-xl p-8 text-center border ${
@@ -605,7 +608,7 @@ export default function MyDeliveries() {
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${dk('divide-white/5', 'divide-gray-100')}`}>
-                  {filteredDeliveries.map(delivery => {
+                  {filteredDeliveries.map((delivery, idx) => {
                     const s = getStatus(delivery.current_status)
                     const isActioning = actionLoading === delivery.id
                     const fee = calcFee(delivery)
@@ -613,7 +616,8 @@ export default function MyDeliveries() {
                     return (
                       <tr
                         key={delivery.id}
-                        className={`transition-colors ${dk('hover:bg-white/5', 'hover:bg-gray-50')}`}
+                        style={stagger(idx % 20, 35)}
+                        className={`zn-row transition-colors ${dk('hover:bg-white/5', 'hover:bg-gray-50')}`}
                       >
                         {/* Item */}
                         <td className="px-4 py-3">
@@ -735,8 +739,8 @@ export default function MyDeliveries() {
 
       {/* ── Modal: Código de confirmação ── */}
       {codeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className={`w-full max-w-sm rounded-2xl border p-6 ${
+        <div className="zn-fade fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className={`zn-modal w-full max-w-sm rounded-2xl border p-6 ${
             isDarkMode ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-gray-200 shadow-2xl'
           }`}>
             {/* Cabeçalho */}
