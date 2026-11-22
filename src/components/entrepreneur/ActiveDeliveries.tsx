@@ -251,7 +251,7 @@ export default function ActiveDeliveries() {
                         {d.deliverer_name || 'Entregador atribuído'}
                       </p>
                       {d.deliverer_phone && (
-                        <p className={`text-[10px] ${dk('text-emerald-500', 'text-emerald-600')}`}>{d.deliverer_phone}</p>
+                        <p className={`text-[11px] ${dk('text-emerald-500', 'text-emerald-600')}`}>{d.deliverer_phone}</p>
                       )}
                     </div>
                   </div>
@@ -314,7 +314,7 @@ export default function ActiveDeliveries() {
       {/* ── Modal: código de confirmação ── */}
       {codeModal && (
         <div className="zn-fade fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`zn-modal w-full max-w-sm rounded-2xl border p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
+          <div className={`zn-modal w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-2xl border p-5 sm:p-6 ${dk('bg-[#1a1a1a] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl ${dk('bg-orange-500/15', 'bg-orange-50')}`}>

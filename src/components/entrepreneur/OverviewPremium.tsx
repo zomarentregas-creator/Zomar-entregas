@@ -352,7 +352,7 @@ export default function Overview() {
                   </div>
                 </div>
               </div>
-              <div className={`flex justify-between text-[10px] font-semibold uppercase tracking-wider mt-1 ${subtle}`}>
+              <div className={`flex justify-between text-[11px] font-semibold uppercase tracking-wider mt-1 ${subtle}`}>
                 <span>Recolha</span><span>Destino</span>
               </div>
             </div>
@@ -492,8 +492,8 @@ export default function Overview() {
                           <p className={`text-sm font-semibold truncate ${strong}`}>{d.item_type}</p>
                           <p className={`text-xs truncate ${subtle}`}>{d.destination_address}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${s.color}`}>{s.label}</span>
-                            <span className={`text-[10px] ${subtle}`}>{fmtDate(d.created_at)}</span>
+                            <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${s.color}`}>{s.label}</span>
+                            <span className={`text-[11px] ${subtle}`}>{fmtDate(d.created_at)}</span>
                           </div>
                         </div>
                         <p className="text-sm font-bold text-emerald-500 flex-shrink-0">{fmtMZN(d.estimated_value)}</p>
