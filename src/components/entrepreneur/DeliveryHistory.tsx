@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { AnimatedNumber, PageSkeleton, stagger } from '../Common/MotionKit'
+import '../../styles/zomar-nav.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,11 +152,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
   const hasMore          = filtered.length > page * PER_PAGE
 
   // ── Loading / Error ────────────────────────────────────────────────────────
-  if (loading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className={`animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 ${dk('border-emerald-500','border-emerald-600')}`}/>
-    </div>
-  )
+  if (loading) return <PageSkeleton dark={isDarkMode} rows={4} />
 
   if (error) return (
     <div className={`rounded-2xl p-8 text-center border ${dk('bg-red-500/10 border-red-500/20','bg-red-50 border-red-200')}`}>
@@ -190,11 +188,11 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
         {/* Stats — 3 colunas em todos os tamanhos, texto compacto no mobile */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {[
-            { icon: CheckCircle, label: 'Concluídas', value: filtered.filter(d => d.current_status === 'completed').length,  color: 'text-emerald-400', bg: dk('bg-emerald-500/10','bg-emerald-50') },
-            { icon: DollarSign,  label: isDeliverer ? 'Ganhos' : 'Investido', value: fmtMZN(totalValue), color: 'text-purple-400', bg: dk('bg-purple-500/10','bg-purple-50') },
-            { icon: TrendingUp,  label: isDeliverer ? 'Empresas' : 'Entregadores', value: isDeliverer ? new Set(filtered.map(d => d.entrepreneur_id)).size : uniqueDeliverers, color: 'text-blue-400', bg: dk('bg-blue-500/10','bg-blue-50') },
-          ].map(({ icon: Icon, label, value, color, bg }) => (
-            <div key={label} className={`p-3 sm:p-3.5 rounded-xl ${bg}`}>
+            { icon: CheckCircle, label: 'Concluídas', value: <AnimatedNumber value={filtered.filter(d => d.current_status === 'completed').length} />,  color: 'text-emerald-400', bg: dk('bg-emerald-500/10','bg-emerald-50') },
+            { icon: DollarSign,  label: isDeliverer ? 'Ganhos' : 'Investido', value: <AnimatedNumber value={totalValue} format={fmtMZN} />, color: 'text-purple-400', bg: dk('bg-purple-500/10','bg-purple-50') },
+            { icon: TrendingUp,  label: isDeliverer ? 'Empresas' : 'Entregadores', value: <AnimatedNumber value={isDeliverer ? new Set(filtered.map(d => d.entrepreneur_id)).size : uniqueDeliverers} />, color: 'text-blue-400', bg: dk('bg-blue-500/10','bg-blue-50') },
+          ].map(({ icon: Icon, label, value, color, bg }, idx) => (
+            <div key={label} style={stagger(idx, 80)} className={`zm-swap zm-lift p-3 sm:p-3.5 rounded-xl ${bg}`}>
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                 <Icon size={13} className={color}/>
                 <p className={`text-[9px] sm:text-[11px] uppercase tracking-wider truncate ${dk('text-gray-500','text-gray-500')}`}>{label}</p>
@@ -212,7 +210,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
           <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${dk('text-gray-500','text-gray-400')}`}/>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Pesquisar por item ou destino…"
-            className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm border outline-none transition-all ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50','bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500')}`}/>
+            className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm border outline-none transition-all ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.12)]','bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500')}`}/>
           {search && (
             <button onClick={() => setSearch('')} className={`absolute right-3 top-1/2 -translate-y-1/2 ${dk('text-gray-500','text-gray-400')}`}>
               <X size={13}/>
@@ -225,7 +223,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
             <button key={s} onClick={() => setStatusFilter(s)}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                 statusFilter === s
-                  ? dk('bg-emerald-500 text-black','bg-emerald-600 text-white')
+                  ? dk('zm-press zm-sheen bg-emerald-500 text-black','zm-press zm-sheen bg-emerald-600 text-white')
                   : dk('bg-white/5 text-gray-400 hover:bg-white/10','bg-gray-100 text-gray-600 hover:bg-gray-200')
               }`}>
               {s === 'all' ? 'Todas' : STATUS_CFG[s]?.label}
@@ -250,15 +248,16 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
       ) : (
         <div className={`rounded-2xl border overflow-hidden ${dk('bg-[#121212] border-white/5','bg-white border-gray-200 shadow-sm')}`}>
           <div className={`divide-y ${dk('divide-white/5','divide-gray-100')}`}>
-            {paginated.map(d => {
+            {paginated.map((d, idx) => {
               const sc = STATUS_CFG[d.current_status] || STATUS_CFG.completed
               const val = isDeliverer ? calcFee(d.estimated_value) : d.estimated_value
               const otherName = isDeliverer ? d.entrepreneur_name : d.deliverer_name
 
               return (
                 <div key={d.id}
+                  style={stagger(idx % 20, 45)}
                   onClick={() => navigate(`/${isDeliverer ? 'deliverer' : 'entrepreneur'}/delivery/${d.id}`)}
-                  className={`p-4 sm:p-5 cursor-pointer group transition-all ${dk('hover:bg-white/4','hover:bg-gray-50')}`}>
+                  className={`zm-swap p-4 sm:p-5 cursor-pointer group transition-all ${dk('hover:bg-white/4','hover:bg-gray-50')}`}>
                   <div className="flex items-start justify-between gap-3">
                     {/* Ícone + info */}
                     <div className="flex items-start gap-3 flex-1 min-w-0">
