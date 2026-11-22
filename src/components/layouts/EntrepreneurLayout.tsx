@@ -11,6 +11,8 @@ import {
   Sun, Moon, Store, Home, Wallet,
 } from 'lucide-react';
 import SupportButton from '../shared/SupportButton';
+import '../../styles/zomar-motion.css';
+import '../../styles/zomar-nav.css';
 
 interface EntrepreneurLayoutProps { children: React.ReactNode }
 
@@ -103,6 +105,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
     { label: 'Perfil',   icon: User,    to: '/entrepreneur/profile',
       match: ['/entrepreneur/profile', '/entrepreneur/settings', '/entrepreneur/notifications', '/entrepreneur/help', '/entrepreneur/terms'] },
   ];
+  const activeTabIdx = bottomTabs.findIndex(t => t.match.some(m => location.pathname.startsWith(m)));
 
   const handleLogout = async () => {
     try {
@@ -125,11 +128,12 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
     const active = location.pathname === item.path;
     return (
       <Link to={item.path} onClick={() => setSidebarOpen(false)} data-tip={item.tip}
-        className={`flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all duration-150 group text-sm font-medium ${
+        className={`relative flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all duration-150 group text-sm font-medium ${
           active
             ? dk('bg-emerald-500/10 text-emerald-400 border-emerald-500/30', 'bg-emerald-100 text-emerald-700 border-emerald-200')
-            : dk('border-transparent text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/8', 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-200')
+            : dk('border-transparent text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/8 hover:translate-x-0.5', 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-200 hover:translate-x-0.5')
         }`}>
+        {active && <span className="zn-nav-mark" aria-hidden="true"/>}
         <div className="flex items-center gap-2.5">
           <span className={`transition-transform duration-150 ${active ? 'scale-110' : 'group-hover:scale-105'}`}>{item.icon}</span>
           <span>{item.label}</span>
@@ -144,7 +148,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
       <style>{styles}</style>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)}/>
+        <div className="zn-fade fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)}/>
       )}
 
       {/* ══ SIDEBAR ══ */}
@@ -170,11 +174,11 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
         <div className="flex-1 px-2.5 py-3 overflow-y-auto zomar-scrollbar space-y-4">
           <div>
             <p className={`text-[9px] font-bold uppercase tracking-widest px-2 mb-1.5 ${dk('text-gray-600', 'text-gray-400')}`}>Menu</p>
-            <nav className="space-y-0.5">{menuItems.map(item => <NavLink key={item.path} item={item}/>)}</nav>
+            <nav className="space-y-0.5 zm-stagger">{menuItems.map(item => <NavLink key={item.path} item={item}/>)}</nav>
           </div>
           <div>
             <p className={`text-[9px] font-bold uppercase tracking-widest px-2 mb-1.5 ${dk('text-gray-600', 'text-gray-400')}`}>Conta</p>
-            <nav className="space-y-0.5">{accountItems.map(item => <NavLink key={item.path} item={item}/>)}</nav>
+            <nav className="space-y-0.5 zm-stagger">{accountItems.map(item => <NavLink key={item.path} item={item}/>)}</nav>
           </div>
         </div>
 
@@ -209,7 +213,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
                 <Menu size={17} className={dk('text-gray-300', 'text-gray-700')}/>
               </button>
               <div className="min-w-0">
-                <h2 className={`text-sm font-bold truncate ${dk('text-white', 'text-gray-900')}`}>{getCurrentPageTitle()}</h2>
+                <h2 key={getCurrentPageTitle()} className={`zn-title text-sm font-bold truncate ${dk('text-white', 'text-gray-900')}`}>{getCurrentPageTitle()}</h2>
                 <p className={`text-[10px] hidden sm:block ${dk('text-gray-500', 'text-gray-500')}`}>Gerencie as suas entregas</p>
               </div>
             </div>
@@ -225,7 +229,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
                   className={`p-2 rounded-lg border relative transition-colors ${dk('border-white/10 bg-white/5 hover:bg-white/10', 'border-gray-200 bg-gray-50 hover:bg-gray-100')}`}>
                   <Bell size={15} className={dk('text-gray-300', 'text-gray-600')}/>
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+                    <span className="zn-badge absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -235,7 +239,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
                   <>
                     <div className="fixed inset-0 z-30" onClick={() => setNotificationsOpen(false)}/>
                     <div
-                      className={`absolute right-0 mt-2 rounded-xl shadow-2xl border z-50 overflow-hidden ${dk('bg-[#111]/95 border-white/10 backdrop-blur-sm', 'bg-white border-gray-200')}`}
+                      className={`zn-menu absolute right-0 mt-2 rounded-xl shadow-2xl border z-50 overflow-hidden ${dk('bg-[#111]/95 border-white/10 backdrop-blur-sm', 'bg-white border-gray-200')}`}
                       style={{ width: 'min(304px, calc(100vw - 24px))' }}>
                       <div className={`p-3 border-b flex items-center justify-between ${dk('border-white/5', 'border-gray-100')}`}>
                         <h3 className={`font-bold text-sm ${dk('text-white', 'text-gray-900')}`}>Notificações</h3>
@@ -290,7 +294,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-30" onClick={() => setUserMenuOpen(false)}/>
-                    <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-2xl border z-40 py-1 overflow-hidden ${dk('bg-[#111]/95 border-white/10 backdrop-blur-sm', 'bg-white border-gray-200')}`}>
+                    <div className={`zn-menu absolute right-0 mt-2 w-48 rounded-xl shadow-2xl border z-40 py-1 overflow-hidden ${dk('bg-[#111]/95 border-white/10 backdrop-blur-sm', 'bg-white border-gray-200')}`}>
                       {[
                         { to: '/entrepreneur/profile',  icon: <User size={13}/>,     label: 'Meu Perfil' },
                         { to: '/entrepreneur/settings', icon: <Settings size={13}/>, label: 'Configurações' },
@@ -340,15 +344,21 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
       {/* ══ BOTTOM NAV (mobile) ══ */}
       <nav aria-label="Navegação principal"
         className={`lg:hidden fixed bottom-0 inset-x-0 z-30 border-t backdrop-blur-xl pb-[env(safe-area-inset-bottom)] ${dk('bg-[#0a0f12]/95 border-white/[0.07]', 'bg-white/95 border-gray-200')}`}>
-        <div className="grid grid-cols-4 max-w-md mx-auto">
+        <div className="relative grid grid-cols-4 max-w-md mx-auto">
+          {activeTabIdx >= 0 && (
+            <span aria-hidden="true" className="zn-tab-glow" style={{ width: `${100 / bottomTabs.length}%`, transform: `translateX(${activeTabIdx * 100}%)`, transition: 'transform .5s cubic-bezier(.22,1,.36,1)' }}/>
+          )}
+          <span aria-hidden="true" className="zn-tab-indicator pointer-events-none absolute top-0 left-0 flex justify-center" style={{ width: `${100 / bottomTabs.length}%`, transform: `translateX(${Math.max(activeTabIdx, 0) * 100}%)`, opacity: activeTabIdx < 0 ? 0 : 1 }}>
+            <span className="block h-[2px] w-8 rounded-full bg-gradient-to-r from-emerald-400 to-teal-300 shadow-[0_0_12px_rgba(16,185,129,.8)]"/>
+          </span>
           {bottomTabs.map(({ label, icon: Icon, to, match }) => {
             const active = match.some(m => location.pathname.startsWith(m));
             return (
               <Link key={to} to={to} aria-current={active ? 'page' : undefined}
-                className={`flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 text-[11px] font-semibold transition-colors ${
+                className={`relative zm-press flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 text-[11px] font-semibold transition-colors ${
                   active ? 'text-emerald-500' : dk('text-gray-400 active:text-white', 'text-gray-500 active:text-gray-900')
                 }`}>
-                <Icon size={21} strokeWidth={active ? 2.4 : 2}/>
+                <Icon size={21} strokeWidth={active ? 2.4 : 2} className={active ? 'zn-tab-pop' : ''}/>
                 <span>{label}</span>
               </Link>
             );
