@@ -8,9 +8,11 @@ export const WHATSAPP_DISPLAY = '+258 84 258 9799'
 /**
  * Contas ZOMAR que recebem pagamentos. Preencher quando estiverem definidas, ex.:
  *   { label: 'M-Pesa (Vodacom)', value: '+258 84 ... ....' }
- * Enquanto estiver vazio, a app pede ao cliente que solicite os dados por WhatsApp.
+ * Se ficar vazio, a app pede ao cliente que solicite os dados por WhatsApp.
  */
-export const PAYMENT_ACCOUNTS: { label: string; value: string }[] = []
+export const PAYMENT_ACCOUNTS: { label: string; value: string }[] = [
+  { label: 'e-Mola (Movitel)', value: '+258 87 881 9635' },
+]
 
 export const whatsappLink = (text: string): string =>
   `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`
