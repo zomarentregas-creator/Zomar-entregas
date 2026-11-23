@@ -26,7 +26,7 @@ interface EarningEntry {
 
 interface WithdrawalRow {
   id: string; amount: number; status: string; payment_method: string
-  requested_at: string; rejection_reason: string | null
+  requested_at: string; rejection_reason: string | null; payment_reference?: string | null
 }
 
 interface PeriodStats {
@@ -89,7 +89,7 @@ export default function Earnings() {
     const { data: bal, error: balErr } = await supabase.rpc('deliverer_available_balance')
     setBalance(balErr ? null : Number(bal ?? 0))
     const { data: wd } = await supabase.from('withdrawals')
-      .select('id, amount, status, payment_method, requested_at, rejection_reason')
+      .select('id, amount, status, payment_method, requested_at, rejection_reason, payment_reference')
       .eq('user_id', user.id).order('requested_at', { ascending: false }).limit(5)
     setWithdrawals((wd ?? []) as WithdrawalRow[])
   }, [user?.id])
@@ -199,7 +199,7 @@ export default function Earnings() {
             <p className={`text-3xl font-black mt-1 ${dk('text-emerald-400', 'text-emerald-600')}`}>
               {balance === null ? '—' : fmtMZN(balance)}
             </p>
-            <p className={`text-[11px] mt-1 ${dk('text-gray-500', 'text-gray-400')}`}>Mínimo 50 MZN · taxa 10 MZN</p>
+            <p className={`text-[11px] mt-1 ${dk('text-gray-500', 'text-gray-400')}`}>Mínimo 50 MZN · taxa 10 MZN · pago manualmente pela equipa ZOMAR</p>
           </div>
           <button onClick={() => setShowWithdraw(true)} disabled={balance === null || balance < 50}
             className={`zm-press zm-sheen flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold disabled:opacity-40 ${dk('bg-emerald-500 text-black hover:bg-emerald-400', 'bg-emerald-600 text-white hover:bg-emerald-700')}`}>
@@ -209,7 +209,7 @@ export default function Earnings() {
         {withdrawals.length > 0 && (
           <div className={`relative mt-4 pt-3 border-t space-y-2 ${dk('border-white/8', 'border-gray-100')}`}>
             {withdrawals.map(w => (
-              <div key={w.id} className="flex items-center justify-between text-xs">
+              <div key={w.id} className="flex flex-wrap items-center justify-between text-xs">
                 <span className={dk('text-gray-400', 'text-gray-500')}>{fmtShort(w.requested_at)} · {w.payment_method.toUpperCase()}</span>
                 <span className="flex items-center gap-2">
                   <b className={dk('text-white', 'text-gray-900')}>{fmtMZN(w.amount)}</b>
@@ -222,6 +222,9 @@ export default function Earnings() {
                     {w.status === 'completed' ? 'Pago' : w.status === 'rejected' ? 'Rejeitado' : w.status === 'approved' ? 'Aprovado' : 'Pendente'}
                   </span>
                 </span>
+                {w.status === 'completed' && w.payment_reference && (
+                  <span className={`basis-full text-[11px] ${dk('text-gray-500', 'text-gray-400')}`}>Comprovativo: {w.payment_reference}</span>
+                )}
               </div>
             ))}
           </div>

@@ -58,6 +58,15 @@ interface DashStats {
 /* ─── Helpers ────────────────────────────────────────────────────────────────── */
 const PAGE_SIZE = 15
 
+/** Chama uma função segura do servidor; lança erro se `success` for falso. */
+async function rpcOrThrow(fn: string, args: Record<string, unknown>) {
+  const { data, error } = await supabase.rpc(fn, args)
+  if (error) throw error
+  const r = data as { success?: boolean; error?: string } | null
+  if (r && r.success === false) throw new Error(r.error || 'Operação recusada.')
+  return r
+}
+
 const STATUS_CFG: Record<string, {
   icon: React.ReactNode
   label: string
@@ -299,11 +308,7 @@ export default function AdminSubscriptions() {
   /* ── Acções rápidas ── */
   const quickAction = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', id)
-      if (error) throw error
+      await rpcOrThrow('admin_update_subscription', { p_id: id, p_patch: { status: newStatus } })
       showToast(`Subscrição marcada como "${STATUS_CFG[newStatus]?.label ?? newStatus}".`)
       closeDropdown()
       load()
@@ -321,27 +326,8 @@ export default function AdminSubscriptions() {
       `Confirma que o pagamento de ${sub.price.toLocaleString('pt-MZ', { style:'currency', currency:'MZN', minimumFractionDigits:0 })} foi recebido.`
     )) return
     try {
-      const now    = new Date()
-      const renew  = new Date(now); renew.setMonth(renew.getMonth() + 1)
-      const { error } = await supabase.from('subscriptions').update({
-        status:       'active',
-        start_date:   now.toISOString(),
-        renewal_date: renew.toISOString(),
-        updated_at:   now.toISOString(),
-      }).eq('id', sub.id)
-      if (error) throw error
-
-      // Notificar o utilizador
-      try {
-        await supabase.from('notifications').insert({
-          user_id:    sub.user_id,
-          title:      '✅ Plano activado!',
-          message:    `O teu plano ${sub.plan_name} foi activado com sucesso. Bem-vindo ao ZOMAR!`,
-          type:       'payment',
-          read:       false,
-          delivery_id: null,
-        })
-      } catch { /* silencioso */ }
+      const ref = window.prompt('Referência do comprovativo (código M-Pesa/e-Mola ou n.º da transferência) — opcional:') ?? ''
+      await rpcOrThrow('admin_activate_subscription', { p_subscription_id: sub.id, p_months: 1, p_amount: sub.price, p_reference: ref })
 
       showToast(`✅ Plano "${sub.plan_name}" activado com sucesso!`)
       closeDropdown()
@@ -353,20 +339,8 @@ export default function AdminSubscriptions() {
 
   const renewSub = async (sub: Subscription) => {
     try {
-      const now      = new Date()
-      const newEnd   = new Date(now); newEnd.setMonth(newEnd.getMonth() + 1)
-      const newRenew = new Date(newEnd); newRenew.setDate(newRenew.getDate() - 3)
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          status:        'active',
-          current_usage: 0,
-          start_date:    now.toISOString(),
-          end_date:      newEnd.toISOString(),
-          renewal_date:  newRenew.toISOString(),
-        })
-        .eq('id', sub.id)
-      if (error) throw error
+      const ref = window.prompt('Referência do comprovativo da renovação — opcional:') ?? ''
+      await rpcOrThrow('admin_activate_subscription', { p_subscription_id: sub.id, p_months: 1, p_amount: sub.price, p_reference: ref })
       showToast('Subscrição renovada com sucesso.')
       closeDropdown()
       load()
@@ -380,19 +354,15 @@ export default function AdminSubscriptions() {
     if (!editSub) return
     setSaving(true)
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          status:        editForm.status,
-          plan_name:     editForm.plan_name.trim(),
-          price:         Number(editForm.price),
-          max_deliveries: Number(editForm.max_deliveries),
-          current_usage:  Number(editForm.current_usage),
-          end_date:       editForm.end_date     || null,
-          renewal_date:   editForm.renewal_date || null,
-        })
-        .eq('id', editSub.id)
-      if (error) throw error
+      await rpcOrThrow('admin_update_subscription', { p_id: editSub.id, p_patch: {
+        status:         editForm.status,
+        plan_name:      editForm.plan_name.trim(),
+        price:          Number(editForm.price),
+        max_deliveries: Number(editForm.max_deliveries),
+        current_usage:  Number(editForm.current_usage),
+        end_date:       editForm.end_date     || null,
+        renewal_date:   editForm.renewal_date || null,
+      } })
       showToast('Subscrição actualizada.')
       setEditSub(null)
       load()
