@@ -28,7 +28,7 @@ export const PLANS: Plan[] = [
     max_deliveries:  30,
     coverage:        30_000,
     color:           'blue',
-    stripe_price_id: null, // TODO: substituir por 'price_xxx' após criar no Stripe
+    stripe_price_id: 'price_1UekFdRenJICpc39WKIqWLNo', // Stripe (modo teste); trocar pelos IDs live em produção
     features: [
       '30 entregas por mês',
       'Entregas extra: 28 MZN cada',
@@ -48,7 +48,7 @@ export const PLANS: Plan[] = [
     color:           'emerald',
     popular:         true,
     badge:           'POPULAR',
-    stripe_price_id: null, // TODO: substituir por 'price_xxx' após criar no Stripe
+    stripe_price_id: 'price_1UekFfRenJICpc39tcCQk4Am', // Stripe (modo teste); trocar pelos IDs live em produção
     features: [
       '100 entregas por mês',
       'Entregas extra: 22 MZN cada',
@@ -68,7 +68,7 @@ export const PLANS: Plan[] = [
     coverage:        500_000,
     color:           'purple',
     badge:           'RECOMENDADO',
-    stripe_price_id: null, // TODO: substituir por 'price_xxx' após criar no Stripe
+    stripe_price_id: 'price_1UekFgRenJICpc39btxAV7Zs', // Stripe (modo teste); trocar pelos IDs live em produção
     features: [
       'Entregas ilimitadas',
       'Suporte 24/7 dedicado',

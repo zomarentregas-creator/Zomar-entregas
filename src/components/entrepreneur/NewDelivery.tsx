@@ -169,8 +169,6 @@ export default function NewDelivery() {
 
     setLoading(true)
     try {
-      // FIX: usar 'status' em vez de 'current_status' (coluna correcta no schema)
-      // FIX: 'scheduled' adicionado ao CHECK constraint do schema
       const deliveryStatus = isScheduled ? 'scheduled' : 'created'
 
       const insertPayload: Record<string, any> = {
@@ -181,7 +179,7 @@ export default function NewDelivery() {
         destination_address: destinationAddress.trim(),
         estimated_value:     parseFloat(estimatedValue),
         notes:               notes.trim() || null,
-        status:              deliveryStatus,
+        current_status:      deliveryStatus,
       }
 
       // FIX: colunas de agendamento adicionadas ao schema
@@ -201,13 +199,7 @@ export default function NewDelivery() {
 
       if (dErr) throw dErr
 
-      // Incrementar uso da subscrição
-      if (deliveriesTotal > 0 && deliveriesTotal < 999999) {
-        await supabase
-          .from('subscriptions')
-          .update({ current_usage: deliveriesUsed + 1 })
-          .eq('id', subscription.id)
-      }
+      // O uso do plano é contado no servidor (trigger enforce_delivery_subscription_quota)
 
       // Checkpoint inicial
       try {
@@ -224,35 +216,7 @@ export default function NewDelivery() {
         console.warn('[NewDelivery] checkpoint insert failed:', cpErr)
       }
 
-      // Notificar entregadores (apenas se não for agendada)
-      if (!isScheduled) {
-        try {
-          // FIX: role correcto é 'deliveryman' (não 'deliverer')
-          const { data: deliverers } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('role', 'deliveryman')
-            .eq('status', 'ativo')
-
-          if (deliverers && deliverers.length > 0) {
-            const fmtVal = parseFloat(estimatedValue).toLocaleString('pt-MZ', {
-              style: 'currency', currency: 'MZN', minimumFractionDigits: 0,
-            })
-            const notifs = deliverers.map(d => ({
-              user_id:     d.user_id,
-              title:       '🚚 Nova entrega disponível!',
-              message:     `"${itemType.trim()}" · Origem: ${originAddress.trim()} · Valor: ${fmtVal}. Aceita agora!`,
-              type:        'delivery',
-              read:        false,
-              delivery_id: delivery.id,
-              created_at:  new Date().toISOString(),
-            }))
-            await supabase.from('notifications').insert(notifs)
-          }
-        } catch (notifErr) {
-          console.warn('[NewDelivery] notification insert failed:', notifErr)
-        }
-      }
+      // Os entregadores são avisados no servidor (trigger notify_new_delivery)
 
       setCreatedId(delivery.id)
       setDeliveryCode(delivery.delivery_code ?? null)

@@ -6,8 +6,8 @@ import { supabase } from '../../lib/supabase'
 import {
   Search, RefreshCw, ChevronLeft, ChevronRight,
   CheckCircle, AlertCircle, Clock, X, Shield,
-  UserCheck, UserX, ShieldAlert, Edit2, Package,
-  Activity, Filter, ChevronDown, Eye,
+  UserCheck, ShieldAlert, Edit2, Package,
+  Activity, ChevronDown, Eye,
 } from 'lucide-react'
 
 /* ── CSS fix ── */
@@ -125,7 +125,7 @@ export default function AdminActivityLog() {
         ...logs.map(l => l.actor_id).filter(Boolean),
       ])]
 
-      let nameMap: Record<string, string> = {}
+      const nameMap: Record<string, string> = {}
       if (allIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')

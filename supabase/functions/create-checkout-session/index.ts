@@ -1,20 +1,13 @@
 // supabase/functions/create-checkout-session/index.ts
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { corsHeaders as cors, preflight } from '../_shared/http.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
 serve(async (req) => {
-  // Responder ao preflight OPTIONS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 200, headers: corsHeaders })
-  }
+  const pre = preflight(req); if (pre) return pre
+  const corsHeaders = cors(req)
 
   try {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
@@ -59,9 +52,21 @@ serve(async (req) => {
       )
     }
 
-    if (!priceId.startsWith('price_')) {
+    // Só aceita preços do próprio catálogo: sem isto, qualquer utilizador podia
+    // escolher qualquer price_ da conta Stripe. Configure ALLOWED_PRICE_IDS com os IDs dos planos.
+    const allowed = (Deno.env.get('ALLOWED_PRICE_IDS') ?? '').split(',').map((v: string) => v.trim()).filter(Boolean)
+    if (allowed.length === 0) {
+      console.warn('[checkout] ALLOWED_PRICE_IDS não definido: qualquer price_ é aceite')
+    } else if (!allowed.includes(String(priceId))) {
       return new Response(
-        JSON.stringify({ error: `Price ID inválido: "${priceId}". Deve começar com "price_".` }),
+        JSON.stringify({ error: 'Plano inválido.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (typeof priceId !== 'string' || !priceId.startsWith('price_')) {
+      return new Response(
+        JSON.stringify({ error: 'Price ID inválido.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -124,7 +129,7 @@ serve(async (req) => {
   } catch (err: any) {
     console.error('Erro create-checkout-session:', err)
     return new Response(
-      JSON.stringify({ error: err.message ?? 'Erro interno' }),
+      JSON.stringify({ error: 'Não foi possível concluir o pedido. Tente novamente.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

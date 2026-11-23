@@ -104,7 +104,7 @@ export default function AdminSettings() {
     new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN', minimumFractionDigits: 2 }).format(v)
 
   const card = `rounded-xl border transition-all duration-200 ${isDark ? 'bg-[#1a1a1a] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`
-  const inputCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none transition-all ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-orange-500/60' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400 shadow-sm'}`
+  const inputCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none transition-all ${isDark ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/60' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-400 shadow-sm'}`
   const dividerCls = `pb-5 mb-5 border-b last:border-0 last:pb-0 last:mb-0 ${isDark ? 'border-white/5' : 'border-gray-100'}`
 
   const SettingGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -124,7 +124,7 @@ export default function AdminSettings() {
 
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
     <button onClick={() => onChange(!checked)} role="switch" aria-checked={checked}
-      className={`relative rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-400/30
+      className={`relative rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-400/30
         ${checked ? 'bg-emerald-500' : isDark ? 'bg-white/15' : 'bg-gray-200'}`}
       style={{ height: 22, width: 40 }}>
       <span className={`absolute top-0.5 left-0.5 w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-transform duration-300 ${checked ? 'translate-x-[18px]' : 'translate-x-0'}`}/>
@@ -159,7 +159,7 @@ export default function AdminSettings() {
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
                   active
-                    ? isDark ? 'border-orange-400 text-orange-400' : 'border-orange-500 text-orange-600'
+                    ? isDark ? 'border-emerald-400 text-emerald-400' : 'border-emerald-500 text-emerald-600'
                     : isDark ? 'border-transparent text-gray-400 hover:text-gray-200' : 'border-transparent text-gray-500 hover:text-gray-800'
                 }`}>
                 <Icon size={15}/>{tab.label}
@@ -329,7 +329,7 @@ export default function AdminSettings() {
         {/* Guardar */}
         <div className={`flex justify-end pt-4 border-t ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
           <button onClick={handleSave} disabled={saving}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 bg-gradient-to-r from-orange-500 to-amber-500 text-white ${!isDark && 'hover:shadow-lg'}`}>
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 bg-gradient-to-r from-emerald-500 to-amber-500 text-white ${!isDark && 'hover:shadow-lg'}`}>
             {saving ? <Loader2 size={15} className="animate-spin"/> : <Save size={15}/>}
             {saving ? 'A guardar…' : 'Guardar Alterações'}
           </button>

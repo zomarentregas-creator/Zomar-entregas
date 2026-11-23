@@ -1,0 +1,71 @@
+/* ============================================================================
+   ZOMAR — CAMADA DE TEMA ESCURO  (escopo: `.zt`)
+   ----------------------------------------------------------------------------
+   Aplica a linguagem visual do ecrã de login (fundo #0a0f14, cartões #0d1318,
+   bordas e brilhos esmeralda) às páginas que ainda usam as classes antigas
+   (`bg-[#1a1a1a]`, `border-white/8`…). Só actua dentro de `.zt`, que os layouts
+   põem quando o tema é escuro, por isso o modo claro não é afectado.
+   ========================================================================== */
+
+.zt {
+  --zt-card: rgba(13, 19, 24, 0.88);
+  --zt-card-solid: #0d1318;
+  --zt-border: rgba(16, 185, 129, 0.12);
+  --zt-border-strong: rgba(16, 185, 129, 0.32);
+  --zt-glow: rgba(16, 185, 129, 0.10);
+  background-color: #0a0f14;
+}
+
+/* Cartões e painéis com os fundos escuros antigos */
+.zt [class*="bg-[#1a1a1a]"],
+.zt [class*="bg-[#121212]"],
+.zt [class*="bg-[#141414]"],
+.zt [class*="bg-[#0d0d0d]"] {
+  background-color: var(--zt-card);
+  border-color: var(--zt-border);
+}
+.zt [class*="rounded-2xl"][class*="bg-[#1a1a1a]"],
+.zt [class*="rounded-2xl"][class*="bg-[#121212]"],
+.zt [class*="rounded-xl"][class*="bg-[#1a1a1a]"] {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+  transition: border-color 0.25s var(--zm-ease, ease), box-shadow 0.25s var(--zm-ease, ease);
+}
+.zt [class*="rounded-2xl"][class*="bg-[#1a1a1a]"]:hover {
+  border-color: var(--zt-border-strong);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 18px 40px -18px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--zt-glow);
+}
+
+/* Bordas subtis passam a ter o tom esmeralda do login */
+.zt [class*="border-white/5"],
+.zt [class*="border-white/8"],
+.zt [class*="border-white/10"],
+.zt [class*="border-white/[0.07]"] {
+  border-color: var(--zt-border);
+}
+.zt [class*="divide-white/5"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--zt-border);
+}
+
+/* Campos de formulário: foco esmeralda como no login */
+.zt input:focus,
+.zt textarea:focus,
+.zt select:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+.zt select option { background-color: #0d1318; color: #f3f4f6; }
+
+/* Cabeçalhos e rodapés translúcidos */
+.zt header[class*="backdrop"],
+.zt footer[class*="bg-black/20"] { background-color: rgba(10, 15, 20, 0.72); }
+
+/* Barras de rolagem finas */
+.zt ::-webkit-scrollbar { width: 8px; height: 8px; }
+.zt ::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.18); border-radius: 9999px; }
+.zt ::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.32); }
+.zt ::-webkit-scrollbar-track { background: transparent; }
+.zt ::selection { background: rgba(16, 185, 129, 0.35); color: #fff; }
+
+/* Fundo ambiente por baixo do conteúdo (precisa de `isolate` no contentor) */
+.zt-ambient { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }

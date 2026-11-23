@@ -13,10 +13,12 @@ import {
   LogOut, AlertCircle, CheckCircle, Camera,
   Lock, Eye, EyeOff, ChevronRight, HelpCircle,
   DollarSign, Clock, Bell, Users2,
-  Upload, Trash2, Loader2,
+  Trash2,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import DeleteAccountModal from './DeleteAccountModal'
+import TwoFactorPanel from './TwoFactorPanel'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    TYPES
@@ -86,7 +88,7 @@ function buildCSS(dark: boolean): string {
   }
 
   .dp * { box-sizing:border-box; font-family:var(--font); }
-  .dp { background:var(--bg); min-height:60vh; color:var(--text); padding:18px; transition:background .25s,color .25s; }
+  .dp { background:${dark ? 'transparent' : 'var(--bg)'}; min-height:60dvh; max-width:100%; overflow-x:clip; color:var(--text); padding:18px; transition:background .25s,color .25s; }
   .dp ::-webkit-scrollbar { width:4px; }
   .dp ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
 
@@ -158,7 +160,7 @@ function buildCSS(dark: boolean): string {
     opacity:0; transition:opacity .18s;
   }
   .dp-avatar:hover .dp-avatar-overlay { opacity:1; }
-  .dp-avatar-overlay span { font-size:9px; color:#fff; font-weight:700; letter-spacing:.4px; text-transform:uppercase; }
+  .dp-avatar-overlay span { font-size:11px; color:#fff; font-weight:700; letter-spacing:.4px; text-transform:uppercase; }
 
   /* ── BOTÃO CÂMARA (badge no canto) ── */
   .dp-cam-btn {
@@ -211,7 +213,7 @@ function buildCSS(dark: boolean): string {
   /* ── REST OF STYLES (unchanged) ── */
   .dp-status-pill {
     display:inline-flex; align-items:center; gap:5px;
-    padding:3px 9px; border-radius:5px; font-size:10px; font-weight:700;
+    padding:3px 9px; border-radius:5px; font-size:11px; font-weight:700;
     letter-spacing:.6px; text-transform:uppercase; margin-bottom:6px;
   }
   .dp-status-pill.ent { background:rgba(139,92,246,.15); color:#a78bfa; border:1px solid rgba(139,92,246,.3); }
@@ -233,7 +235,7 @@ function buildCSS(dark: boolean): string {
   .dp-fgrid { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
   .dp-fgrid .full { grid-column:1/-1; }
   .dp-field { margin-bottom:13px; }
-  .dp-label { font-size:10px; font-weight:700; color:var(--text3); margin-bottom:5px; letter-spacing:.7px; text-transform:uppercase; display:block; }
+  .dp-label { font-size:11px; font-weight:700; color:var(--text3); margin-bottom:5px; letter-spacing:.7px; text-transform:uppercase; display:block; }
   .dp-wrap { position:relative; }
   .dp-ico { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text3); pointer-events:none; }
   .dp-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px 9px 34px; color:var(--text); font-size:13px; outline:none; transition:.15s; }
@@ -258,7 +260,7 @@ function buildCSS(dark: boolean): string {
   .dp-kpi.em { background:var(--emglow2); border-color:rgba(16,185,129,.2); }
   .dp-kpi-val { font-family:var(--fontC); font-weight:900; font-size:24px; color:var(--text); line-height:1; margin-bottom:3px; }
   .dp-kpi.em .dp-kpi-val { color:var(--em2); }
-  .dp-kpi-lbl { font-size:10px; color:var(--text3); letter-spacing:.5px; text-transform:uppercase; }
+  .dp-kpi-lbl { font-size:11px; color:var(--text3); letter-spacing:.5px; text-transform:uppercase; }
   .dp-srow { display:flex; align-items:center; justify-content:space-between; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; margin-bottom:6px; }
   .dp-srow-l { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text2); }
   .dp-srow-v { font-size:13px; font-weight:700; color:var(--text); }
@@ -281,14 +283,14 @@ function buildCSS(dark: boolean): string {
   .dp-toggle-knob { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--text3); transition:.2s; }
   .dp-toggle input:checked ~ .dp-toggle-track .dp-toggle-knob { left:20px; background:var(--em); }
   .dp-danger { background:var(--redglow); border:1px solid rgba(239,68,68,.2); border-radius:var(--rl); padding:18px; }
-  .dp-danger-title { font-family:var(--fontC); font-weight:700; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#f87171; margin-bottom:12px; }
+  .dp-danger-title { font-family:var(--fontC); font-weight:700; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#f87171; margin-bottom:12px; }
   .dp-danger-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:10px; }
   .dp-danger-row:last-child { margin-bottom:0; }
   .dp-danger-desc { font-size:12px; color:var(--text2); line-height:1.4; }
   .dp-cfgbtn { display:flex; align-items:center; gap:10px; width:100%; padding:10px 8px; border-radius:8px; font-size:13px; color:var(--text2); background:transparent; border:none; cursor:pointer; transition:.15s; text-align:left; justify-content:space-between; }
   .dp-cfgbtn:hover { background:var(--surface2); color:var(--text); }
   .dp-cfgbtn-l { display:flex; align-items:center; gap:10px; }
-  .dp-strength-label { font-size:10px; color:var(--text3); margin-top:3px; }
+  .dp-strength-label { font-size:11px; color:var(--text3); margin-top:3px; }
   .dp-mismatch { font-size:11px; color:var(--red); margin-top:4px; }
   .dp-hint { font-size:11px; color:var(--text3); margin-top:4px; }
   .dp-banner { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-radius:10px; margin-bottom:16px; animation:slideIn .25s; }
@@ -299,13 +301,60 @@ function buildCSS(dark: boolean): string {
   .dp-banner-body { font-size:12px; opacity:.85; }
   .dp-trust-bar { height:6px; background:var(--surface3); border-radius:3px; overflow:hidden; margin-top:8px; }
   .dp-trust-fill { height:100%; border-radius:3px; transition:width .5s ease; }
+
+  /* ── RESPONSIVO ── */
+  .dp-span2 { grid-column:1/3; }
+  .dp-kpi-grid.k4 { grid-template-columns:repeat(4,1fr); }
+  .dp-hero > *, .dp-panel, .dp-col3, .dp-grid > * { min-width:0; }
+  .dp-hero-email, .dp-hero-name { overflow-wrap:anywhere; }
+  .dp-eye { padding:8px; right:4px; }
+  @media(max-width:960px) {
+    .dp-span2 { grid-column:1/-1; }
+    .dp-kpi-grid.k4 { grid-template-columns:1fr 1fr; }
+  }
+  @media(max-width:640px) {
+    .dp { padding:10px; }
+    .dp-bar { flex-wrap:wrap; padding:10px 12px; gap:10px; margin-bottom:12px; }
+    .dp-brand { font-size:18px; }
+    .dp-bar-right { margin-left:auto; }
+    .dp-tabs {
+      order:3; flex:1 0 100%; justify-content:flex-start; gap:4px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      margin:0 -4px; padding:0 4px;
+    }
+    .dp-tabs::-webkit-scrollbar { display:none; }
+    .dp-tab { min-height:40px; padding:8px 14px; flex-shrink:0; }
+    .dp-hero { grid-template-columns:1fr; padding:18px 14px; gap:14px; justify-items:center; text-align:center; margin-bottom:12px; }
+    .dp-hero-name { font-size:22px; }
+    .dp-hero-email { justify-content:center; }
+    .dp-chips { justify-content:center; }
+    .dp-hero-btns { flex-direction:row; flex-wrap:wrap; width:100%; }
+    .dp-hero-btns .dp-btn { flex:1 1 140px; }
+    .dp-grid, .dp-col3 { gap:12px; }
+    .dp-panel { padding:14px; }
+    .dp-fgrid { grid-template-columns:1fr; }
+    .dp-input { font-size:16px; padding-top:12px; padding-bottom:12px; }
+    .dp-btn { min-height:44px; }
+    .dp-btn-sm { min-height:40px; padding:8px 14px; }
+    .dp-cfgbtn { min-height:48px; }
+    .dp-srow { flex-wrap:wrap; gap:6px 10px; }
+    .dp-danger-row { flex-direction:column; align-items:stretch; }
+    .dp-nrow { gap:12px; min-height:52px; }
+    .dp-kpi-val { font-size:22px; }
+    .dp-modal-bg { align-items:flex-end; padding:0; }
+    .dp-modal { max-width:none; border-radius:20px 20px 0 0; max-height:calc(100dvh - 24px); overflow-y:auto; }
+    .dp-modal-footer { padding-bottom:calc(20px + env(safe-area-inset-bottom)); }
+  }
   `
 }
 
 function maskPhone(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 11)
-  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '')
-  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '')
+  // Formato moçambicano: +258 8X XXX XXXX
+  let d = v.replace(/\D/g, '')
+  if (d.startsWith('258')) d = d.slice(3)
+  d = d.slice(0, 9)
+  const parts = [d.slice(0, 2), d.slice(2, 5), d.slice(5, 9)].filter(Boolean)
+  return d ? `+258 ${parts.join(' ')}` : ''
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -536,6 +585,12 @@ export default function Profile() {
   }
 
   const handleLogout = async () => { try { await signOut() } finally { navigate('/login') } }
+  const handleLogoutEverywhere = async () => {
+    try { await supabase.auth.signOut({ scope: 'global' }) } catch { /* continua para o login */ }
+    try { await signOut() } finally { navigate('/login') }
+  }
+  const [showDelete, setShowDelete] = useState(false)
+  const hasPassword = (user as any)?.app_metadata?.provider !== 'google'
 
   const initial        = (profile?.full_name || user?.email || '?').charAt(0).toUpperCase()
   const isDeliverer    = profile?.role === 'deliverer'
@@ -551,7 +606,7 @@ export default function Profile() {
 
   if (loading) return (
     <><style>{buildCSS(isDark)}</style>
-    <div className="dp" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' }}>
+    <div className="dp" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60dvh' }}>
       <div style={{ textAlign:'center' }}>
         <div style={{ width:48, height:48, margin:'0 auto 14px', border:'3px solid rgba(16,185,129,.15)', borderTopColor:'var(--em)', borderRadius:'50%', animation:'spin 1s linear infinite' }}/>
         <p style={{ color:'var(--text3)', fontSize:14 }}>Carregando perfil…</p>
@@ -561,7 +616,7 @@ export default function Profile() {
 
   if (!profile) return (
     <><style>{buildCSS(isDark)}</style>
-    <div className="dp" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' }}>
+    <div className="dp" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60dvh' }}>
       <div style={{ textAlign:'center' }}>
         <AlertCircle style={{ margin:'0 auto 12px', color:'#ef4444' }} size={40}/>
         <p style={{ fontSize:16, fontWeight:700 }}>Perfil não encontrado</p>
@@ -747,7 +802,7 @@ export default function Profile() {
                 <div className="dp-field">
                   <label className="dp-label">Telefone</label>
                   <div className="dp-wrap"><Phone className="dp-ico" size={13}/>
-                    <input className="dp-input" type="tel" value={phone} onChange={e => setPhone(maskPhone(e.target.value))} disabled={!editing} placeholder="(11) 99999-9999"/>
+                    <input className="dp-input" type="tel" value={phone} onChange={e => setPhone(maskPhone(e.target.value))} disabled={!editing} placeholder="+258 84 123 4567"/>
                   </div>
                 </div>
                 <div className="dp-field full">
@@ -807,7 +862,7 @@ export default function Profile() {
               <hr className="dp-divider"/>
               {!isDeliverer && stats.planName && (
                 <div style={{background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.2)', borderRadius:10, padding:'12px 14px', marginBottom:16}}>
-                  <div style={{fontSize:10, fontWeight:700, letterSpacing:1.5, textTransform:'uppercase', color:'#a78bfa', marginBottom:6}}>Plano Activo</div>
+                  <div style={{fontSize:11, fontWeight:700, letterSpacing:1.5, textTransform:'uppercase', color:'#a78bfa', marginBottom:6}}>Plano Activo</div>
                   <div style={{fontFamily:'var(--fontC)', fontWeight:900, fontSize:16, color:'#a78bfa'}}>{stats.planName}</div>
                   <div style={{fontSize:11, color:'var(--text3)', marginTop:4}}>{stats.planUsage} / {stats.planLimit||'∞'} entregas</div>
                 </div>
@@ -816,7 +871,11 @@ export default function Profile() {
                 <div className="dp-danger-title">⚠ Zona de Perigo</div>
                 <div className="dp-danger-row">
                   <div className="dp-danger-desc">Terminar sessão em todos os dispositivos</div>
-                  <button className="dp-btn dp-btn-danger dp-btn-sm" onClick={handleLogout}><LogOut size={12}/>Sair</button>
+                  <button className="dp-btn dp-btn-danger dp-btn-sm" onClick={handleLogoutEverywhere}><LogOut size={12}/>Sair</button>
+                </div>
+                <div className="dp-danger-row">
+                  <div className="dp-danger-desc">Eliminar a conta e os dados pessoais</div>
+                  <button className="dp-btn dp-btn-danger dp-btn-sm" onClick={() => setShowDelete(true)}><Trash2 size={12}/>Eliminar</button>
                 </div>
               </div>
             </div>
@@ -874,9 +933,9 @@ export default function Profile() {
         {activeTab === 'Estatísticas' && (
           isDeliverer ? (
             <div className="dp-grid">
-              <div className="dp-panel" style={{gridColumn:'1/3'}}>
+              <div className="dp-panel dp-span2">
                 <div className="dp-ptitle"><Package size={13}/>Actividade de Entregas</div>
-                <div className="dp-kpi-grid" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
+                <div className="dp-kpi-grid k4">
                   <div className="dp-kpi em"><div className="dp-kpi-val">{stats.totalDeliveries}</div><div className="dp-kpi-lbl">Total</div></div>
                   <div className="dp-kpi"><div className="dp-kpi-val" style={{color:'var(--em2)'}}>{stats.completedDeliveries}</div><div className="dp-kpi-lbl">Concluídas</div></div>
                   <div className="dp-kpi"><div className="dp-kpi-val" style={{color:'var(--yellow)'}}>{stats.pendingDeliveries}</div><div className="dp-kpi-lbl">Em andamento</div></div>
@@ -902,9 +961,9 @@ export default function Profile() {
             </div>
           ) : (
             <div className="dp-grid">
-              <div className="dp-panel" style={{gridColumn:'1/3'}}>
+              <div className="dp-panel dp-span2">
                 <div className="dp-ptitle"><Package size={13}/>Actividade de Encomendas</div>
-                <div className="dp-kpi-grid" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
+                <div className="dp-kpi-grid k4">
                   <div className="dp-kpi em"><div className="dp-kpi-val">{stats.totalDeliveries}</div><div className="dp-kpi-lbl">Criadas</div></div>
                   <div className="dp-kpi"><div className="dp-kpi-val" style={{color:'var(--em2)'}}>{stats.completedDeliveries}</div><div className="dp-kpi-lbl">Concluídas</div></div>
                   <div className="dp-kpi"><div className="dp-kpi-val" style={{color:'#a78bfa'}}>{stats.pendingDeliveries}</div><div className="dp-kpi-lbl">Em curso</div></div>
@@ -953,10 +1012,10 @@ export default function Profile() {
         {/* ══════════ TAB: SEGURANÇA ══════════ */}
         {activeTab === 'Segurança' && (
           <div className="dp-grid">
-            <div className="dp-panel" style={{gridColumn:'1/3'}}>
+            <div className="dp-panel dp-span2">
               <div className="dp-ptitle"><Shield size={13}/>Alterar Senha</div>
               {!changingPw ? (
-                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12}}>
                   <div>
                     <div style={{fontSize:13, color:'var(--text2)', marginBottom:3}}>Senha da conta</div>
                     <div style={{fontSize:11, color:'var(--text3)'}}>Recomendamos trocar a senha regularmente.</div>
@@ -977,7 +1036,7 @@ export default function Profile() {
                         <input type={f.show?'text':'password'} className="dp-input" style={{paddingRight:36}}
                           value={(pwForm as any)[f.key]} onChange={e => setPwForm(p=>({...p,[f.key]:e.target.value}))}
                           placeholder={f.placeholder} autoComplete={f.ac}/>
-                        <button className="dp-eye" onClick={f.toggle}>{f.show?<EyeOff size={13}/>:<Eye size={13}/>}</button>
+                        <button type="button" className="dp-eye" onClick={f.toggle} aria-label={f.show?'Esconder senha':'Mostrar senha'}>{f.show?<EyeOff size={13}/>:<Eye size={13}/>}</button>
                       </div>
                       {f.key==='next' && pwForm.next.length > 0 && (
                         <><div className="dp-prog" style={{marginTop:6}}><div className="dp-prog-fill" style={{width:`${pwStrength}%`,background:pwStrengthColor}}/></div><div className="dp-strength-label">{pwStrengthLabel}</div></>
@@ -985,7 +1044,7 @@ export default function Profile() {
                       {f.key==='confirm' && pwForm.confirm && pwForm.next !== pwForm.confirm && <div className="dp-mismatch">As senhas não coincidem.</div>}
                     </div>
                   ))}
-                  <div style={{display:'flex', gap:8}}>
+                  <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
                     <button className="dp-btn dp-btn-ghost" onClick={() => { setChangingPw(false); setPwForm({current:'',next:'',confirm:''}) }}>Cancelar</button>
                     <button className="dp-btn dp-btn-primary" onClick={handleChangePassword} disabled={saving}>{saving?'Confirmando…':'Confirmar'}</button>
                   </div>
@@ -996,7 +1055,10 @@ export default function Profile() {
               <div className="dp-panel">
                 <div className="dp-ptitle"><Shield size={13}/>Status</div>
                 <div className="dp-srow"><div className="dp-srow-l"><CheckCircle size={13} style={{color:'var(--em)'}}/>E-mail verificado</div><div className="dp-srow-v g">Sim</div></div>
-                <div className="dp-srow"><div className="dp-srow-l"><Lock size={13} style={{color:'var(--text3)'}}/>2FA</div><div className="dp-srow-v" style={{color:'var(--text3)'}}>Em breve</div></div>
+                </div>
+              <div className="dp-panel">
+                <div className="dp-ptitle"><Lock size={13}/>Dois passos (2FA)</div>
+                <TwoFactorPanel/>
               </div>
             </div>
           </div>
@@ -1005,7 +1067,7 @@ export default function Profile() {
         {/* ══════════ TAB: PREFERÊNCIAS ══════════ */}
         {activeTab === 'Preferências' && (
           <div className="dp-grid">
-            <div className="dp-panel" style={{gridColumn:'1/3'}}>
+            <div className="dp-panel dp-span2">
               <div className="dp-ptitle"><Bell size={13}/>Notificações</div>
               {notifRows.map(({ key, label, desc, icon:Icon }) => (
                 <div key={key} className="dp-nrow">
@@ -1034,13 +1096,18 @@ export default function Profile() {
                 <p style={{fontSize:13, color:'var(--text2)', marginBottom:14, lineHeight:1.6}}>
                   Tem dúvidas? A nossa equipa está disponível.
                 </p>
-                <button className="dp-btn dp-btn-ghost dp-btn-full" onClick={() => window.open('mailto:zomarentregas@gmail.com','_blank')}><Mail size={13}/>Enviar E-mail</button>
-                <button className="dp-btn dp-btn-ghost dp-btn-full" style={{marginTop:8}} onClick={() => window.open('https://wa.me/258842589799','_blank')}><Phone size={13}/>WhatsApp</button>
+                <button className="dp-btn dp-btn-ghost dp-btn-full" onClick={() => window.open('https://mail.google.com/mail/?view=cm&fs=1&to=zomarentregas%40gmail.com&su=Suporte%20ZOMAR','_blank','noopener,noreferrer')}><Mail size={13}/>Enviar E-mail</button>
+                <button className="dp-btn dp-btn-ghost dp-btn-full" style={{marginTop:8}} onClick={() => window.open('https://wa.me/258842589799','_blank','noopener,noreferrer')}><Phone size={13}/>WhatsApp</button>
               </div>
             </div>
           </div>
         )}
 
+        {showDelete && (
+          <DeleteAccountModal userEmail={user?.email || ''} requirePassword={hasPassword}
+            onClose={() => setShowDelete(false)}
+            onDeleted={async () => { try { await signOut() } finally { navigate('/login', { replace: true }) } }} />
+        )}
       </div>
     </>
   )

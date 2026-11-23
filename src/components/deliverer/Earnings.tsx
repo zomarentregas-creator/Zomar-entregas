@@ -1,15 +1,15 @@
 // src/components/deliverer/Earnings.tsx
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
-  DollarSign, TrendingUp, Package, Calendar,
-  ChevronDown, RefreshCw, CheckCircle,
-  ChevronLeft, ChevronRight, BarChart3,
+  DollarSign, TrendingUp, Package,
+  RefreshCw, CheckCircle,
+  ChevronLeft, ChevronRight, BarChart3, Wallet, Clock, XCircle,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { AnimatedNumber, PageSkeleton, stagger } from '../Common/MotionKit'
 import { spotlight } from '../../hooks/useMotion'
+import WithdrawModal from './WithdrawModal'
 import '../../styles/zomar-nav.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -22,6 +22,11 @@ interface EarningEntry {
   estimated_value: number
   completed_at:    string
   created_at:      string
+}
+
+interface WithdrawalRow {
+  id: string; amount: number; status: string; payment_method: string
+  requested_at: string; rejection_reason: string | null
 }
 
 interface PeriodStats {
@@ -38,9 +43,6 @@ const calcFee = (v: number) => Math.round(v * 0.8 * 100) / 100
 const fmtMZN = (v: number) =>
   new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN', minimumFractionDigits: 0 }).format(v)
 
-const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'short', year: 'numeric' })
-
 const fmtShort = (s: string) =>
   new Date(s).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'short' })
 
@@ -48,7 +50,6 @@ const fmtShort = (s: string) =>
 
 export default function Earnings() {
   const { user } = useAuth()
-  const navigate  = useNavigate()
 
   const [isDarkMode, setIsDarkMode] = useState(() =>
     localStorage.getItem('deliverer_theme') !== 'light'
@@ -65,6 +66,9 @@ export default function Earnings() {
   const [allTime,  setAllTime]  = useState(0)
   const [loading,  setLoading]  = useState(true)
   const [page,     setPage]     = useState(0)
+  const [balance,  setBalance]  = useState<number | null>(null)
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRow[]>([])
+  const [showWithdraw, setShowWithdraw] = useState(false)
 
   const PAGE_SIZE = 10
 
@@ -78,6 +82,17 @@ export default function Earnings() {
     if (p === 'year')  d.setFullYear(d.getFullYear() - 1)
     return d.toISOString()
   }
+
+  // ── Saldo e levantamentos (o saldo é calculado no servidor) ────────────────
+  const loadWallet = useCallback(async () => {
+    if (!user?.id) return
+    const { data: bal, error: balErr } = await supabase.rpc('deliverer_available_balance')
+    setBalance(balErr ? null : Number(bal ?? 0))
+    const { data: wd } = await supabase.from('withdrawals')
+      .select('id, amount, status, payment_method, requested_at, rejection_reason')
+      .eq('user_id', user.id).order('requested_at', { ascending: false }).limit(5)
+    setWithdrawals((wd ?? []) as WithdrawalRow[])
+  }, [user?.id])
 
   // ── Carregar ───────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -113,7 +128,8 @@ export default function Earnings() {
       setAllTime((allData || []).reduce((s, d) => s + calcFee(d.estimated_value || 0), 0))
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
-  }, [user?.id, period])
+    loadWallet()
+  }, [user?.id, period, loadWallet])
 
   useEffect(() => { load(); setPage(0) }, [load])
 
@@ -173,6 +189,50 @@ export default function Earnings() {
           <RefreshCw size={16}/>
         </button>
       </div>
+
+      {/* Saldo disponível + levantar */}
+      <div className={`${card} p-5 relative overflow-hidden`}>
+        <div className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full bg-emerald-500/10 blur-3xl"/>
+        <div className="relative flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wider ${dk('text-gray-500', 'text-gray-400')}`}>Saldo disponível</p>
+            <p className={`text-3xl font-black mt-1 ${dk('text-emerald-400', 'text-emerald-600')}`}>
+              {balance === null ? '—' : fmtMZN(balance)}
+            </p>
+            <p className={`text-[11px] mt-1 ${dk('text-gray-500', 'text-gray-400')}`}>Mínimo 50 MZN · taxa 10 MZN</p>
+          </div>
+          <button onClick={() => setShowWithdraw(true)} disabled={balance === null || balance < 50}
+            className={`zm-press zm-sheen flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold disabled:opacity-40 ${dk('bg-emerald-500 text-black hover:bg-emerald-400', 'bg-emerald-600 text-white hover:bg-emerald-700')}`}>
+            <Wallet size={16}/> Levantar
+          </button>
+        </div>
+        {withdrawals.length > 0 && (
+          <div className={`relative mt-4 pt-3 border-t space-y-2 ${dk('border-white/8', 'border-gray-100')}`}>
+            {withdrawals.map(w => (
+              <div key={w.id} className="flex items-center justify-between text-xs">
+                <span className={dk('text-gray-400', 'text-gray-500')}>{fmtShort(w.requested_at)} · {w.payment_method.toUpperCase()}</span>
+                <span className="flex items-center gap-2">
+                  <b className={dk('text-white', 'text-gray-900')}>{fmtMZN(w.amount)}</b>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
+                    w.status === 'completed' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+                    : w.status === 'rejected' ? 'bg-red-500/15 text-red-400 border-red-500/25'
+                    : w.status === 'approved' ? 'bg-sky-500/15 text-sky-400 border-sky-500/25'
+                    : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25'}`}>
+                    {w.status === 'completed' ? <CheckCircle size={10}/> : w.status === 'rejected' ? <XCircle size={10}/> : <Clock size={10}/>}
+                    {w.status === 'completed' ? 'Pago' : w.status === 'rejected' ? 'Rejeitado' : w.status === 'approved' ? 'Aprovado' : 'Pendente'}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showWithdraw && balance !== null && (
+        <WithdrawModal isDarkMode={isDarkMode} balance={balance}
+          onClose={() => setShowWithdraw(false)}
+          onDone={() => { setShowWithdraw(false); loadWallet() }} />
+      )}
 
       {/* Seletor de período */}
       <div className={`${card} p-1.5 flex gap-1`}>

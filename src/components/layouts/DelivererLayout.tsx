@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import SupportButton from '../shared/SupportButton';
 import '../../styles/zomar-motion.css';
-import '../../styles/zomar-nav.css';
+import '../../styles/zomar-nav.css'
+import '../../styles/zomar-theme.css'
+import Aurora from '../Common/Aurora';
 
 interface DelivererLayoutProps { children: React.ReactNode }
 
@@ -128,7 +130,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
     const active = location.pathname === item.path;
     return (
       <Link to={item.path} onClick={() => setSidebarOpen(false)} data-tip={item.tip}
-        className={`relative flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all duration-150 group text-sm font-medium ${
+        className={`relative flex items-center justify-between px-3 py-3 rounded-lg border transition-all duration-150 group text-sm font-medium ${
           active
             ? dk('bg-emerald-500/10 text-emerald-400 border-emerald-500/30', 'bg-emerald-100 text-emerald-700 border-emerald-200')
             : dk('border-transparent text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/8 hover:translate-x-0.5', 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-200 hover:translate-x-0.5')
@@ -144,7 +146,8 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${dk('bg-[#0a0a0a] text-white', 'bg-gray-50 text-gray-900')}`}>
+    <div className={`min-h-dvh isolate transition-colors duration-300 ${dk('zt zm-dark bg-[#0a0f14] text-white', 'bg-gray-50 text-gray-900')}`}>
+      {isDarkMode && <Aurora />}
       <style>{styles}</style>
 
       {sidebarOpen && (
@@ -163,21 +166,21 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
             </div>
             <div>
               <h1 className={`text-base font-black italic ${dk('text-white', 'text-gray-900')}`}>ZOMAR</h1>
-              <p className={`text-[9px] font-bold uppercase tracking-widest ${dk('text-emerald-500', 'text-emerald-600')}`}>Entregador</p>
+              <p className={`text-[11px] font-bold uppercase tracking-widest ${dk('text-emerald-500', 'text-emerald-600')}`}>Entregador</p>
             </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-lg hover:bg-white/5">
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-white/5" aria-label="Fechar menu">
             <X size={15} className={dk('text-gray-400', 'text-gray-500')}/>
           </button>
         </div>
 
         <div className="flex-1 px-2.5 py-3 overflow-y-auto zomar-scrollbar space-y-4">
           <div>
-            <p className={`text-[9px] font-bold uppercase tracking-widest px-2 mb-1.5 ${dk('text-gray-600', 'text-gray-400')}`}>Menu</p>
+            <p className={`text-[11px] font-bold uppercase tracking-widest px-2 mb-1.5 ${dk('text-gray-600', 'text-gray-400')}`}>Menu</p>
             <nav className="space-y-0.5 zm-stagger">{menuItems.map(item => <NavLink key={item.path} item={item}/>)}</nav>
           </div>
           <div>
-            <p className={`text-[9px] font-bold uppercase tracking-widest px-2 mb-1.5 ${dk('text-gray-600', 'text-gray-400')}`}>Conta</p>
+            <p className={`text-[11px] font-bold uppercase tracking-widest px-2 mb-1.5 ${dk('text-gray-600', 'text-gray-400')}`}>Conta</p>
             <nav className="space-y-0.5 zm-stagger">{accountItems.map(item => <NavLink key={item.path} item={item}/>)}</nav>
           </div>
         </div>
@@ -189,7 +192,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-xs font-bold truncate ${dk('text-white', 'text-gray-900')}`}>{user?.full_name?.split(' ')[0] || 'Utilizador'}</p>
-              <p className={`text-[9px] ${dk('text-emerald-400', 'text-emerald-600')}`}>Entregador</p>
+              <p className={`text-[11px] ${dk('text-emerald-400', 'text-emerald-600')}`}>Entregador</p>
             </div>
           </div>
           <button onClick={toggleTheme}
@@ -209,7 +212,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
         <header className={`sticky top-0 z-40 backdrop-blur-xl border-b pt-[env(safe-area-inset-top)] ${isHome ? 'hidden lg:block ' : ''}${dk('bg-black/50 border-white/5', 'bg-white/95 border-gray-200')}`}>
           <div className="px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-white/5 flex-shrink-0">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-white/5 flex-shrink-0" aria-label="Abrir menu">
                 <Menu size={17} className={dk('text-gray-300', 'text-gray-700')}/>
               </button>
               <h2 key={getCurrentPageTitle()} className={`zn-title text-sm font-bold truncate ${dk('text-white', 'text-gray-900')}`}>{getCurrentPageTitle()}</h2>
@@ -223,10 +226,10 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
               {/* Bell */}
               <div className="relative">
                 <button data-tip="Notificações" onClick={() => setNotificationsOpen(p => !p)}
-                  className={`p-2 rounded-lg border relative transition-colors ${dk('border-white/10 bg-white/5 hover:bg-white/10', 'border-gray-200 bg-gray-50 hover:bg-gray-100')}`}>
+                  aria-label="Notificações" className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border relative transition-colors ${dk('border-white/10 bg-white/5 hover:bg-white/10', 'border-gray-200 bg-gray-50 hover:bg-gray-100')}`}>
                   <Bell size={15} className={dk('text-gray-300', 'text-gray-600')}/>
                   {unreadCount > 0 && (
-                    <span className="zn-badge absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+                    <span className="zn-badge absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-white text-[11px] font-black flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -240,7 +243,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
                       style={{ width: 'min(304px, calc(100vw - 24px))' }}>
                       <div className={`p-3 border-b flex items-center justify-between ${dk('border-white/5', 'border-gray-100')}`}>
                         <h3 className={`font-bold text-sm ${dk('text-white', 'text-gray-900')}`}>Notificações</h3>
-                        {unreadCount > 0 && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-bold">{unreadCount} novas</span>}
+                        {unreadCount > 0 && <span className="text-[11px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-bold">{unreadCount} novas</span>}
                       </div>
                       <div className="max-h-64 overflow-y-auto">
                         {notifications.length === 0
@@ -274,7 +277,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
               {/* User */}
               <div className="relative">
                 <button data-tip="Menu do utilizador" onClick={() => setUserMenuOpen(p => !p)}
-                  className={`flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-lg border transition-all ${
+                  className={`flex items-center gap-1.5 sm:gap-2 p-1.5 min-h-[44px] rounded-lg border transition-all ${
                     userMenuOpen ? 'border-emerald-500/50 bg-emerald-500/10'
                     : dk('border-white/10 bg-white/5 hover:border-emerald-500/30', 'border-gray-200 bg-gray-50 hover:border-emerald-300')
                   }`}>
@@ -283,7 +286,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
                   </div>
                   <div className="hidden md:block text-left">
                     <p className={`text-xs font-bold leading-tight ${dk('text-white', 'text-gray-900')}`}>{(user?.full_name || user?.email || 'Utilizador').split(' ')[0]}</p>
-                    <p className={`text-[9px] ${dk('text-emerald-400', 'text-emerald-600')}`}>Entregador</p>
+                    <p className={`text-[11px] ${dk('text-emerald-400', 'text-emerald-600')}`}>Entregador</p>
                   </div>
                   <ChevronDown size={12} className={`hidden md:block transition-transform ${userMenuOpen ? 'rotate-180' : ''} ${dk('text-gray-400', 'text-gray-500')}`}/>
                 </button>
@@ -352,7 +355,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
             const active = match.some(m => location.pathname.startsWith(m));
             return (
               <Link key={to} to={to} aria-current={active ? 'page' : undefined}
-                className={`relative zm-press flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 text-[10.5px] font-semibold transition-colors ${
+                className={`relative zm-press flex flex-col items-center justify-center gap-1 pt-2.5 pb-2 text-[11px] font-semibold transition-colors ${
                   active ? 'text-emerald-500' : dk('text-gray-400 active:text-white', 'text-gray-500 active:text-gray-900')
                 }`}>
                 <Icon size={21} strokeWidth={active ? 2.4 : 2} className={active ? 'zn-tab-pop' : ''}/>

@@ -197,24 +197,20 @@ export default function HelpPage() {
           priority:   ticketForm.priority,
           category:   ticketForm.category,
           status:     'open',
-          created_at: new Date().toISOString(),
         })
 
-      // Se a tabela não existir ainda (erro 42P01), fallback para mailto
-      if (error && error.code === '42P01') {
-        const mailto = `mailto:suporte@zomar.com?subject=${encodeURIComponent(ticketForm.subject)}&body=${encodeURIComponent(ticketForm.message)}`
-        window.open(mailto)
-        setToast({ type: 'success', message: 'A redirecionar para o seu cliente de e-mail...' })
-      } else if (error) {
-        throw error
-      } else {
-        setToast({ type: 'success', message: 'Chamado criado com sucesso! Receberá uma resposta em breve.' })
-      }
+      if (error) throw error
+      setToast({ type: 'success', message: 'Chamado criado com sucesso! Receberá uma resposta em breve.' })
 
       setShowTicketForm(false)
       setTicketForm({ subject: '', message: '', priority: 'medium', category: 'general' })
     } catch (err: any) {
-      setToast({ type: 'error', message: err.message || 'Erro ao criar chamado. Tente novamente.' })
+      setToast({
+        type: 'error',
+        message: err?.code === '42P01'
+          ? 'Os chamados ainda não estão disponíveis. Fale connosco por WhatsApp: +258 84 258 9799.'
+          : 'Erro ao criar chamado. Tente novamente ou fale connosco por WhatsApp.',
+      })
     } finally {
       setSubmitting(false)
     }
@@ -297,7 +293,9 @@ export default function HelpPage() {
           </button>
 
           <a
-            href="mailto:suporte@zomar.com"
+            href="https://mail.google.com/mail/?view=cm&fs=1&to=zomarentregas%40gmail.com&su=Suporte%20ZOMAR"
+            target="_blank"
+            rel="noopener noreferrer"
             className={`group p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] ${dk('bg-[#121212] border-white/5 hover:border-green-500/30 hover:bg-green-500/5', 'bg-white border-gray-200 hover:border-green-300 hover:bg-green-50 shadow-sm')}`}
           >
             <div className={`p-3 rounded-xl inline-flex mb-4 ${dk('bg-green-500/10', 'bg-green-100')}`}>

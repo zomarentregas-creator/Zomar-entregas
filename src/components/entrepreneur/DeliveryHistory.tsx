@@ -102,7 +102,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
       const otherIds = [...new Set(
         list.map(d => isDeliverer ? d.entrepreneur_id : d.deliverer_id).filter(Boolean)
       )]
-      let nameMap: Record<string, string> = {}
+      const nameMap: Record<string, string> = {}
       if (otherIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles').select('user_id, full_name').in('user_id', otherIds)
@@ -195,7 +195,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
             <div key={label} style={stagger(idx, 80)} className={`zm-swap zm-lift p-3 sm:p-3.5 rounded-xl ${bg}`}>
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                 <Icon size={13} className={color}/>
-                <p className={`text-[9px] sm:text-[11px] uppercase tracking-wider truncate ${dk('text-gray-500','text-gray-500')}`}>{label}</p>
+                <p className={`text-[11px] sm:text-[11px] uppercase tracking-wider truncate ${dk('text-gray-500','text-gray-500')}`}>{label}</p>
               </div>
               <p className={`text-base sm:text-xl font-black truncate ${dk('text-white','text-gray-900')}`}>{value}</p>
             </div>
@@ -270,7 +270,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <h4 className={`font-bold text-sm truncate ${dk('text-white','text-gray-900')}`}>{d.item_type}</h4>
-                          <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full border flex-shrink-0 ${sc.color}`}>
+                          <span className={`text-[11px] sm:text-[11px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full border flex-shrink-0 ${sc.color}`}>
                             {sc.label}
                           </span>
                         </div>
@@ -279,7 +279,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
                           → {d.destination_address}
                         </p>
                         {/* Meta info — stack no mobile */}
-                        <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] ${dk('text-gray-600','text-gray-400')}`}>
+                        <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] ${dk('text-gray-600','text-gray-400')}`}>
                           {otherName && (
                             <span className="flex items-center gap-1"><User size={9}/> {otherName}</span>
                           )}
@@ -298,7 +298,7 @@ export default function DeliveryHistory({ isDarkMode: isDarkProp }: Props) {
                           {d.current_status === 'completed' ? fmtMZN(val) : '—'}
                         </p>
                         {isDeliverer && d.current_status === 'completed' && (
-                          <p className={`text-[9px] sm:text-[10px] ${dk('text-gray-600','text-gray-400')}`}>80%</p>
+                          <p className={`text-[11px] sm:text-[11px] ${dk('text-gray-600','text-gray-400')}`}>80%</p>
                         )}
                       </div>
                       <ChevronRight size={14} className={`transition-colors ${dk('text-gray-700 group-hover:text-emerald-400','text-gray-300 group-hover:text-emerald-600')}`}/>

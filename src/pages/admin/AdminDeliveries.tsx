@@ -153,18 +153,18 @@ export default function AdminDeliveries() {
   const selectDarkCls = isDark ? 'adm-del-select-dark' : 'adm-del-select-light'
   const inputCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none transition-all ${
     isDark
-      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400 shadow-sm'
+      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-400 shadow-sm'
   }`
   const selectCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none appearance-none cursor-pointer transition-all ${selectDarkCls} ${
     isDark
-      ? 'bg-[#1a1a1a] border-white/10 text-white focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400 shadow-sm'
+      ? 'bg-[#1a1a1a] border-white/10 text-white focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 focus:border-emerald-400 shadow-sm'
   }`
   const modalSelectCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none appearance-none cursor-pointer transition-all ${selectDarkCls} ${
     isDark
-      ? 'bg-[#111] border-white/10 text-white focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400 shadow-sm'
+      ? 'bg-[#111] border-white/10 text-white focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 focus:border-emerald-400 shadow-sm'
   }`
   const card = `rounded-xl border transition-all duration-200 ${
     isDark ? 'bg-[#1a1a1a] border-white/5' : 'bg-white border-gray-200 shadow-sm'
@@ -222,7 +222,7 @@ export default function AdminDeliveries() {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Filter size={13} className="text-orange-400"/>
+              <Filter size={13} className="text-emerald-400"/>
               <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{total} entrega(s)</span>
               {loading && <Loader2 size={13} className="animate-spin text-gray-400"/>}
             </div>
@@ -246,7 +246,7 @@ export default function AdminDeliveries() {
             const sc = STATUS_CFG[d.current_status] || { label: d.current_status, cls: 'bg-gray-500/10 text-gray-400', icon: <AlertCircle size={13}/> }
             return (
               <div key={d.id} style={{ transitionDelay: `${i * 30}ms` }}
-                className={`${card} p-4 hover:border-orange-500/20 transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
+                className={`${card} p-4 hover:border-emerald-500/20 transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
                   {/* ID + Status */}
                   <div>
@@ -298,7 +298,7 @@ export default function AdminDeliveries() {
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => { setSelected(d); setEditStatus(d.current_status) }}
-                        className={`p-2 rounded-lg transition-all hover:scale-110 active:scale-95 ${isDark ? 'hover:bg-orange-500/10 text-orange-400' : 'hover:bg-orange-50 text-orange-500'}`}>
+                        className={`p-2 rounded-lg transition-all hover:scale-110 active:scale-95 ${isDark ? 'hover:bg-emerald-500/10 text-emerald-400' : 'hover:bg-emerald-50 text-emerald-500'}`}>
                         <Eye size={15}/>
                       </button>
                       <button onClick={() => setDeleteTarget(d.id)}
@@ -326,7 +326,7 @@ export default function AdminDeliveries() {
                 const p = Math.max(0, Math.min(page - 2, totalPages - 5)) + i
                 return (
                   <button key={p} onClick={() => setPage(p)}
-                    className={`w-8 h-8 rounded-lg text-xs font-medium ${p === page ? 'bg-orange-500 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
+                    className={`w-8 h-8 rounded-lg text-xs font-medium ${p === page ? 'bg-emerald-500 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
                     {p + 1}
                   </button>
                 )
@@ -400,7 +400,7 @@ export default function AdminDeliveries() {
                   Cancelar
                 </button>
                 <button onClick={handleUpdateStatus} disabled={saving || editStatus === selected.current_status}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-orange-500 hover:bg-orange-400 text-white disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-white disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
                   {saving ? <Loader2 size={14} className="animate-spin"/> : <Edit3 size={14}/>} Guardar
                 </button>
               </div>

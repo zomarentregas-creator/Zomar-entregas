@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ✅ Buscar perfil completo do usuário
   const fetchUserProfile = useCallback(async (authUserId: string): Promise<User | null> => {
     try {
-      console.log('🔍 AuthContext - Buscando perfil para user_id:', authUserId)
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
@@ -73,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Admins sempre têm role definida no BD — nunca vão para RoleSelection
         // Perfil sem role → força RoleSelection (apenas entrepreneur/deliverer novos)
         if (!profile.role) {
-          console.log('ℹ️ AuthContext - Perfil sem role definida. Aguarda RoleSelection.')
+          
           return null
         }
 
@@ -87,10 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar_url: profile.avatar_url
         }
 
-        console.log('✅ AuthContext - Perfil carregado:')
-        console.log('   📧 Email:', userData.email)
-        console.log('   👤 Nome:', userData.full_name)
-        console.log('   🎭 Role:', userData.role)
+        
+        
 
         return userData
       } catch (err: any) {
@@ -146,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Sem role → redireciona para RoleSelection
       if (!newProfile.role) {
-        console.log('ℹ️ AuthContext - Perfil novo sem role. Aguarda RoleSelection.')
+        
         return null
       }
 
@@ -186,7 +183,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initializeAuth = async () => {
       try {
-        console.log('🔐 AuthContext - Inicializando autenticação...')
 
         if (sessionCheckTimeout.current) clearTimeout(sessionCheckTimeout.current)
 
@@ -211,11 +207,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (session?.user) {
-          console.log('✅ AuthContext - Sessão encontrada:', session.user.email)
+          
           const profile = await fetchUserProfile(session.user.id)
           setUser(profile)
         } else {
-          console.log('ℹ️ AuthContext - Nenhuma sessão ativa')
+          
           setUser(null)
         }
       } catch (error: any) {
@@ -230,7 +226,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 AuthContext - Auth state changed:', event)
 
         if (event === 'SIGNED_OUT') {
           setUser(null)
@@ -254,7 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ============================================
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('🔐 AuthContext - Tentando login:', email)
+      
       setLoading(true)
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -296,7 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Não é possível criar uma conta admin por este método.' }
       }
 
-      console.log('📝 AuthContext - CADASTRO:', { email, role })
+      
       setLoading(true)
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -406,11 +401,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ============================================
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 AUTH STATE:', {
-        user: user ? { email: user.email, role: user.role, hasRole: !!user.role } : 'null',
-        isAuthenticated: !!user,
-        loading
-      })
+      
     }
   }, [user, loading])
 

@@ -61,13 +61,13 @@ const ROLE_CFG = {
     label: 'Admin',
     icon: (size = 14) => <ShieldCheck size={size} />,
     emoji: '⚙️',
-    textCls: (d: boolean) => d ? 'text-orange-400' : 'text-orange-600',
-    bgCls:   (d: boolean) => d ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-orange-50 border border-orange-200',
-    avatarBg: 'from-orange-600 to-red-600',
-    rowBg:   (d: boolean) => d ? 'bg-orange-500/3' : 'bg-orange-50/50',
+    textCls: (d: boolean) => d ? 'text-emerald-400' : 'text-emerald-600',
+    bgCls:   (d: boolean) => d ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200',
+    avatarBg: 'from-emerald-600 to-red-600',
+    rowBg:   (d: boolean) => d ? 'bg-emerald-500/3' : 'bg-emerald-50/50',
     badge:   (d: boolean) => d
-      ? 'bg-orange-500/15 border border-orange-500/30 text-orange-300'
-      : 'bg-orange-100 border border-orange-300 text-orange-700',
+      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+      : 'bg-emerald-100 border border-emerald-300 text-emerald-700',
   },
   entrepreneur: {
     label: 'Empreendedor',
@@ -168,7 +168,7 @@ export default function AdminUsers() {
         .map(p => p.user_id)
         .filter(Boolean)
 
-      let subMap: Record<string, Subscription> = {}
+      const subMap: Record<string, Subscription> = {}
       if (entrepreneurIds.length > 0) {
         const { data: subData } = await supabase
           .from('subscriptions')
@@ -266,18 +266,18 @@ export default function AdminUsers() {
   const selectDarkCls = isDark ? 'adm-select-dark' : 'adm-select-light'
   const inputCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none transition-all ${
     isDark
-      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400 shadow-sm'
+      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-400 shadow-sm'
   }`
   const selectCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none appearance-none cursor-pointer transition-all ${selectDarkCls} ${
     isDark
-      ? 'bg-[#1a1a1a] border-white/10 text-white focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400 shadow-sm'
+      ? 'bg-[#1a1a1a] border-white/10 text-white focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 focus:border-emerald-400 shadow-sm'
   }`
   const modalSelectCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none appearance-none cursor-pointer transition-all ${selectDarkCls} ${
     isDark
-      ? 'bg-[#111] border-white/10 text-white focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400 shadow-sm'
+      ? 'bg-[#111] border-white/10 text-white focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 focus:border-emerald-400 shadow-sm'
   }`
   const card = `rounded-xl border transition-all duration-200 ${
     isDark ? 'bg-[#1a1a1a] border-white/5' : 'bg-white border-gray-200 shadow-sm'
@@ -334,7 +334,7 @@ export default function AdminUsers() {
                 onClick={() => setRole(active ? 'all' : filterVal)}
                 className={`rounded-xl border p-4 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                   active
-                    ? isDark ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-300'
+                    ? isDark ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-300'
                     : isDark ? 'bg-[#1a1a1a] border-white/5 hover:border-white/10' : 'bg-white border-gray-200 shadow-sm hover:border-gray-300'
                 }`}
               >
@@ -342,7 +342,7 @@ export default function AdminUsers() {
                   <span className={`p-2 rounded-lg ${cfg.bgCls(isDark)}`}>
                     <span className={cfg.textCls(isDark)}>{cfg.icon(14)}</span>
                   </span>
-                  {active && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>activo</span>}
+                  {active && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>activo</span>}
                 </div>
                 <div className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{count}</div>
                 <div className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{label}</div>
@@ -385,7 +385,7 @@ export default function AdminUsers() {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Filter size={13} className="text-orange-400"/>
+              <Filter size={13} className="text-emerald-400"/>
               <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{total} utilizador(es) encontrado(s)</span>
               {loading && <Loader2 size={13} className="animate-spin text-gray-400"/>}
             </div>
@@ -440,7 +440,7 @@ export default function AdminUsers() {
                         isDark ? 'border-white/3' : 'border-gray-50'
                       } ${
                         isAdmin
-                          ? isDark ? 'bg-orange-500/5 hover:bg-orange-500/8' : 'bg-orange-50/60 hover:bg-orange-50'
+                          ? isDark ? 'bg-emerald-500/5 hover:bg-emerald-500/8' : 'bg-emerald-50/60 hover:bg-emerald-50'
                           : isDark ? 'hover:bg-white/3' : 'hover:bg-gray-50'
                       }`}
                     >
@@ -457,7 +457,7 @@ export default function AdminUsers() {
                                 {u.full_name || 'Sem nome'}
                               </span>
                               {isAdmin && (
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-orange-100 text-orange-600 border border-orange-200'}`}>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-600 border border-emerald-200'}`}>
                                   ADMIN
                                 </span>
                               )}
@@ -597,7 +597,7 @@ export default function AdminUsers() {
                 const p = Math.max(0, Math.min(page - 2, totalPages - 5)) + i
                 return (
                   <button key={p} onClick={() => setPage(p)}
-                    className={`w-8 h-8 rounded-lg text-xs font-medium ${p === page ? 'bg-orange-500 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
+                    className={`w-8 h-8 rounded-lg text-xs font-medium ${p === page ? 'bg-emerald-500 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
                     {p + 1}
                   </button>
                 )
@@ -625,7 +625,7 @@ export default function AdminUsers() {
                       {editUser.full_name || 'Sem nome'}
                     </h3>
                     {editUser.role === 'admin' && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>ADMIN</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>ADMIN</span>
                     )}
                   </div>
                   <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{editUser.email}</p>
@@ -662,13 +662,13 @@ export default function AdminUsers() {
 
                 {editForm.status === 'suspenso' && (
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>Motivo da Suspensão</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>Motivo da Suspensão</label>
                     <input type="text" placeholder="Ex: Violação dos termos de uso"
                       value={editForm.suspension_reason}
                       onChange={e => setEditForm(f => ({ ...f, suspension_reason: e.target.value }))}
                       className={`w-full px-4 py-2.5 rounded-lg text-sm border outline-none transition-all ${
-                        isDark ? 'bg-white/5 border-orange-500/30 text-white placeholder-gray-500 focus:border-orange-500/60'
-                               : 'bg-white border-orange-300 text-gray-900 placeholder-gray-400 focus:border-orange-400'
+                        isDark ? 'bg-white/5 border-emerald-500/30 text-white placeholder-gray-500 focus:border-emerald-500/60'
+                               : 'bg-white border-emerald-300 text-gray-900 placeholder-gray-400 focus:border-emerald-400'
                       }`}
                     />
                     <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Este motivo será mostrado ao utilizador.</p>
@@ -735,7 +735,7 @@ export default function AdminUsers() {
                   Cancelar
                 </button>
                 <button onClick={handleUpdateUser} disabled={saving}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-orange-500 hover:bg-orange-400 text-white disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-white disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
                   {saving ? <Loader2 size={14} className="animate-spin"/> : <Edit2 size={14}/>} Guardar
                 </button>
               </div>

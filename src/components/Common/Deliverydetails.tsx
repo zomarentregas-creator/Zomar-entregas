@@ -125,7 +125,7 @@ export default function DeliveryDetails() {
 
       // Enriquecer com perfis
       const ids = [data.entrepreneur_id, data.deliverer_id].filter(Boolean)
-      let pMap: Record<string, { full_name?: string; phone?: string }> = {}
+      const pMap: Record<string, { full_name?: string; phone?: string }> = {}
       if (ids.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles').select('user_id, full_name, phone').in('user_id', ids)

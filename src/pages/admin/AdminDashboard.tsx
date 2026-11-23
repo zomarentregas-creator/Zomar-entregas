@@ -4,7 +4,7 @@
 // O ApiKeyManager está embutido como componente interno — não precisas do
 // ficheiro separado ApiKeyManager.tsx a não ser que o queiras noutros sítios.
 
-import React, { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/Admin/Adminlayout'
@@ -266,14 +266,14 @@ function ApiKeyManager({ isDark }: { isDark: boolean }) {
         title="Gerir chaves de acesso à API ZOMAR"
         className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-xs border transition-all hover:scale-[1.02] active:scale-[0.98] ${
           isDark
-            ? 'bg-orange-500/10 border-orange-500/25 text-orange-400 hover:bg-orange-500/20'
-            : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100'
+            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/20'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'
         }`}
       >
         <Key size={14} />
         Chaves API
         {activeCount > 0 && (
-          <span className="bg-orange-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+          <span className="bg-emerald-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
             {activeCount}
           </span>
         )}
@@ -303,7 +303,7 @@ function ApiKeyManager({ isDark }: { isDark: boolean }) {
               isDark ? 'border-white/8 bg-[#1a1a1a]' : 'border-gray-100 bg-gray-50'
             }`}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-amber-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                   <Code size={17} className="text-white" />
                 </div>
                 <div>
@@ -382,8 +382,8 @@ function ApiKeyManager({ isDark }: { isDark: boolean }) {
                       maxLength={80}
                       className={`w-full px-3 py-2.5 rounded-lg text-sm border focus:outline-none focus:ring-2 transition-all ${
                         dk(
-                          'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-orange-500/50 focus:ring-orange-500/10',
-                          'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400 focus:ring-orange-400/10'
+                          'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50 focus:ring-emerald-500/10',
+                          'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-400 focus:ring-emerald-400/10'
                         )
                       }`}
                     />
@@ -476,7 +476,7 @@ function ApiKeyManager({ isDark }: { isDark: boolean }) {
                       type="button"
                       onClick={handleCreate}
                       disabled={!form.name.trim() || creating}
-                      className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-orange-500 hover:bg-orange-400 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {creating
                         ? <><Loader2 size={13} className="animate-spin" /> A criar…</>
@@ -491,8 +491,8 @@ function ApiKeyManager({ isDark }: { isDark: boolean }) {
                   onClick={() => { setShowForm(true); setNewKeyVal(null) }}
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed text-sm font-medium transition-all ${
                     dk(
-                      'border-white/10 text-gray-500 hover:border-orange-500/50 hover:text-orange-400 hover:bg-orange-500/5',
-                      'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50'
+                      'border-white/10 text-gray-500 hover:border-emerald-500/50 hover:text-emerald-400 hover:bg-emerald-500/5',
+                      'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50/50'
                     )
                   }`}
                 >
@@ -790,7 +790,7 @@ export default function AdminDashboard() {
           <div className={`${card} lg:col-span-2 p-5`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className={`font-bold ${isDark?'text-white':'text-gray-900'}`}>Entregas Recentes</h2>
-              <button onClick={() => navigate('/admin/deliveries')} className="text-xs text-orange-400 hover:text-orange-300 font-medium">Ver todas →</button>
+              <button onClick={() => navigate('/admin/deliveries')} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium">Ver todas →</button>
             </div>
             {loading && !deliveries.length ? (
               <div className="space-y-2">{[...Array(4)].map((_,i) => <div key={i} className={`h-14 rounded-lg animate-pulse ${isDark?'bg-white/5':'bg-gray-100'}`}/>)}</div>
@@ -888,7 +888,7 @@ export default function AdminDashboard() {
                   className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg ${isDark?'hover:bg-white/5 text-gray-400':'hover:bg-gray-100 text-gray-500'}`}>
                   <RefreshCw size={11} className={alertsLoading?'animate-spin':''}/> Actualizar
                 </button>
-                <button onClick={() => navigate('/admin/activity-log')} className="text-xs text-orange-400 hover:text-orange-300 font-medium flex items-center gap-1">
+                <button onClick={() => navigate('/admin/activity-log')} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1">
                   <Eye size={12}/> Ver logs →
                 </button>
               </div>
@@ -915,7 +915,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <p className={`text-xs mt-0.5 truncate ${isDark?'text-gray-400':'text-gray-500'}`}>
-                          <span className="font-medium text-orange-400">{alert.userName}</span> · {alert.detail}
+                          <span className="font-medium text-emerald-400">{alert.userName}</span> · {alert.detail}
                         </p>
                       </div>
                       <button onClick={() => navigate('/admin/users')}

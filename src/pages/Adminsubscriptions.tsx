@@ -7,9 +7,9 @@ import { supabase } from '../lib/supabase'
 import {
   Search, ChevronDown, MoreVertical, RefreshCw,
   CheckCircle, AlertCircle, Clock, XCircle,
-  ChevronLeft, ChevronRight, CreditCard, Users,
-  TrendingUp, Package, Edit2, Ban, RotateCcw,
-  Calendar, DollarSign, X, Save,
+  ChevronLeft, ChevronRight, CreditCard,
+  TrendingUp, Edit2, Ban, RotateCcw,
+  X, Save,
 } from 'lucide-react'
 
 /* ── CSS fix <option> dark mode ── */
@@ -172,7 +172,7 @@ export default function AdminSubscriptions() {
       const userIds  = profiles.map(p => p.user_id).filter(Boolean)
 
       /* 2. Subscrições dos utilizadores desta página */
-      let subMap: Record<string, Subscription> = {}
+      const subMap: Record<string, Subscription> = {}
       if (userIds.length > 0) {
         let subQ = supabase
           .from('subscriptions')
@@ -191,7 +191,7 @@ export default function AdminSubscriptions() {
       }
 
       /* 3. Filtrar por estado */
-      let rows: Subscription[] = profiles
+      const rows: Subscription[] = profiles
         .filter(p => {
           if (statusFilter === 'all')  return true
           if (statusFilter === 'none') return !subMap[p.user_id]
@@ -408,23 +408,23 @@ export default function AdminSubscriptions() {
   const selectDarkCls = isDark ? 'adms-select-dark' : 'adms-select-light'
   const selectCls = `px-3 py-2 rounded-lg text-sm border outline-none appearance-none cursor-pointer transition-all ${selectDarkCls} ${
     isDark
-      ? 'bg-[#1a1a1a] border-white/10 text-white focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400 shadow-sm'
+      ? 'bg-[#1a1a1a] border-white/10 text-white focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 focus:border-emerald-400 shadow-sm'
   }`
   const inputCls = `px-4 py-2.5 rounded-lg text-sm border outline-none transition-all ${
     isDark
-      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400 shadow-sm'
+      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-400 shadow-sm'
   }`
   const modalInputCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none transition-all ${
     isDark
-      ? 'bg-[#111] border-white/10 text-white placeholder-gray-600 focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400 shadow-sm'
+      ? 'bg-[#111] border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 focus:border-emerald-400 shadow-sm'
   }`
   const modalSelectCls = `w-full px-4 py-2.5 rounded-lg text-sm border outline-none appearance-none cursor-pointer transition-all ${selectDarkCls} ${
     isDark
-      ? 'bg-[#111] border-white/10 text-white focus:border-orange-500/60'
-      : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400 shadow-sm'
+      ? 'bg-[#111] border-white/10 text-white focus:border-emerald-500/60'
+      : 'bg-white border-gray-200 text-gray-900 focus:border-emerald-400 shadow-sm'
   }`
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -436,7 +436,7 @@ export default function AdminSubscriptions() {
     { label: 'Activas',    value: stats.active,              color: 'text-emerald-400', icon: <CheckCircle size={16}/>, bg: isDark ? 'bg-emerald-500/10'   : 'bg-emerald-50'      },
     { label: 'Canceladas', value: stats.cancelled,           color: 'text-red-400',     icon: <XCircle size={16}/>,     bg: isDark ? 'bg-red-500/10'       : 'bg-red-50'          },
     { label: 'Expiradas',  value: stats.expired,             color: 'text-yellow-400',  icon: <AlertCircle size={16}/>, bg: isDark ? 'bg-yellow-500/10'    : 'bg-yellow-50'       },
-    { label: 'MRR',        value: fmtMZN(stats.mrr), color: 'text-orange-400',  icon: <TrendingUp size={16}/>,  bg: isDark ? 'bg-orange-500/10'    : 'bg-orange-50'       },
+    { label: 'MRR',        value: fmtMZN(stats.mrr), color: 'text-emerald-400',  icon: <TrendingUp size={16}/>,  bg: isDark ? 'bg-emerald-500/10'    : 'bg-emerald-50'       },
   ] : []
 
   /* ──────────────────────────────────────────────────────────────────────────
@@ -728,7 +728,7 @@ export default function AdminSubscriptions() {
                 const p = Math.max(0, Math.min(page - 2, totalPages - 5)) + i
                 return (
                   <button key={p} onClick={() => setPage(p)}
-                    className={`w-8 h-8 rounded-lg text-xs font-medium ${p === page ? 'bg-orange-500 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
+                    className={`w-8 h-8 rounded-lg text-xs font-medium ${p === page ? 'bg-emerald-500 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
                     {p + 1}
                   </button>
                 )
@@ -854,7 +854,7 @@ export default function AdminSubscriptions() {
                   Cancelar
                 </button>
                 <button onClick={handleSave} disabled={saving}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white transition-colors flex items-center justify-center gap-2">
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white transition-colors flex items-center justify-center gap-2">
                   <Save size={14}/>{saving ? 'A guardar…' : 'Guardar'}
                 </button>
               </div>

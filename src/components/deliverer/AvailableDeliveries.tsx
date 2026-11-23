@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Package, MapPin, DollarSign, Clock, CheckCircle,
-  Loader2, AlertCircle, RefreshCw, ChevronDown,
+  Package, MapPin, CheckCircle,
+  Loader2, AlertCircle, RefreshCw,
   Filter, Truck, KeyRound, X, ShieldCheck,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -80,12 +80,11 @@ export default function AvailableDeliveries() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      // Entregas disponíveis = status 'accepted' sem entregador atribuído
-      // OU status que permita que um entregador as aceite
+      // Disponíveis = ainda sem entregador e em estado 'created' ou 'scheduled'
       const { data, error } = await supabase
         .from('deliveries')
         .select('id, entrepreneur_id, item_type, origin_address, destination_address, current_status, estimated_value, notes, created_at')
-        .eq('current_status', 'accepted')
+        .in('current_status', ['created', 'scheduled'])
         .is('deliverer_id', null)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -96,7 +95,7 @@ export default function AvailableDeliveries() {
 
       // Enriquecer com dados do empreendedor
       const eIds = [...new Set(list.map(d => d.entrepreneur_id).filter(Boolean))]
-      let eMap: Record<string, { full_name?: string; phone?: string }> = {}
+      const eMap: Record<string, { full_name?: string; phone?: string }> = {}
       if (eIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
@@ -126,7 +125,6 @@ export default function AvailableDeliveries() {
         event:  '*',
         schema: 'public',
         table:  'deliveries',
-        filter: `current_status=eq.accepted`,
       }, load)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
@@ -138,17 +136,24 @@ export default function AvailableDeliveries() {
     setAccepting(delivery.id)
     setConfirmModal(null)
     try {
-      const { error } = await supabase
+      const { data: claimed, error } = await supabase
         .from('deliveries')
         .update({
           deliverer_id:   user.id,
-          current_status: 'in_progress',
+          current_status: 'accepted',
           updated_at:     new Date().toISOString(),
         })
         .eq('id', delivery.id)
         .is('deliverer_id', null) // garantia de que ninguém aceitou entretanto
+        .in('current_status', ['created', 'scheduled'])
+        .select('id')
 
       if (error) throw error
+      if (!claimed?.length) {
+        setDeliveries(prev => prev.filter(d => d.id !== delivery.id))
+        setFeedback({ type: 'error', msg: 'Esta entrega já foi aceite por outro entregador.' })
+        return
+      }
 
       // Audit log — falha silenciosa, não bloqueia o fluxo
       try {
@@ -158,7 +163,7 @@ export default function AvailableDeliveries() {
           action:      'delivery_status_changed',
           entity_type: 'delivery',
           entity_id:   delivery.id,
-          metadata:    { old_status: 'accepted', new_status: 'in_progress', deliverer_id: user.id },
+          metadata:    { old_status: delivery.current_status, new_status: 'accepted', deliverer_id: user.id },
         })
       } catch { /* silencioso */ }
 

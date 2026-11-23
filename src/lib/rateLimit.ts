@@ -34,4 +34,4 @@ class RateLimiter {
   }
 }
 
-export const authLimiter = new RateLimiter(3, 60000) // 3 tentativas por minuto
+export const authLimiter = new RateLimiter(6, 60000) // 6 tentativas por minuto
