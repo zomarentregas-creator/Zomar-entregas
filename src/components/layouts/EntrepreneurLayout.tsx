@@ -11,6 +11,8 @@ import {
   Sun, Moon, Store, Home, Wallet,
 } from 'lucide-react';
 import SupportButton from '../shared/SupportButton';
+import '../../styles/zomar-a11y.css'
+import PreferencesSync from '../shared/PreferencesSync'
 import '../../styles/zomar-motion.css';
 import '../../styles/zomar-nav.css'
 import '../../styles/zomar-theme.css'
@@ -36,10 +38,12 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
     window.addEventListener('storage', h);
     return () => window.removeEventListener('storage', h);
   }, []);
+  useEffect(() => { document.documentElement.dataset.zmTheme = isDarkMode ? 'dark' : 'light' }, [isDarkMode]);
   const toggleTheme = () => {
     setIsDarkMode(p => {
       const n = !p;
       localStorage.setItem('entrepreneur_theme', n ? 'dark' : 'light');
+      localStorage.setItem('zomar-theme-mode', n ? 'dark' : 'light');
       return n;
     });
   };
@@ -147,6 +151,8 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
 
   return (
     <div className={`min-h-dvh isolate transition-colors duration-300 ${dk('zt zm-dark bg-[#0a0f14] text-white', 'bg-gray-50 text-gray-900')}`}>
+      <a href="#main-content" className="zm-skip">Saltar para o conteúdo</a>
+      <PreferencesSync role="entrepreneur" />
       {isDarkMode && <Aurora />}
       <style>{styles}</style>
 
@@ -320,7 +326,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
           </div>
         </header>
 
-        <main className={`px-4 sm:px-6 lg:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6 ${isHome ? 'pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-6' : 'pt-4'}`}>{children}</main>
+        <main id="main-content" tabIndex={-1} className={`outline-none px-4 sm:px-6 lg:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6 ${isHome ? 'pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-6' : 'pt-4'}`}>{children}</main>
 
         <footer className={`hidden lg:block px-4 sm:px-6 py-4 border-t text-xs ${dk('border-white/5 bg-black/20', 'border-gray-200')}`}>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-2">

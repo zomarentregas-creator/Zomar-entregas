@@ -9,16 +9,21 @@ const hasMatchMedia = () => typeof window !== 'undefined' && typeof window.match
 
 /** true quando o sistema pede "reduzir movimento". */
 export function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState<boolean>(() =>
-    hasMatchMedia() ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false,
-  )
+  const read = () =>
+    (typeof document !== 'undefined' && document.documentElement.dataset.a11yMotion === 'reduce') ||
+    (hasMatchMedia() && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const [reduced, setReduced] = useState<boolean>(read)
 
   useEffect(() => {
-    if (!hasMatchMedia()) return
+    const onChange = () => setReduced(read())
+    window.addEventListener('zomar:prefs-changed', onChange)
+    if (!hasMatchMedia()) return () => window.removeEventListener('zomar:prefs-changed', onChange)
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const onChange = () => setReduced(mq.matches)
     mq.addEventListener?.('change', onChange)
-    return () => mq.removeEventListener?.('change', onChange)
+    return () => {
+      mq.removeEventListener?.('change', onChange)
+      window.removeEventListener('zomar:prefs-changed', onChange)
+    }
   }, [])
 
   return reduced

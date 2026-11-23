@@ -1,359 +1,256 @@
-// src/components/entrepreneur/Settings.tsx (ou src/pages/Settings.tsx)
+// src/components/shared/Settings.tsx
 /**
- * ============================================================================
- * SETTINGS — Totalmente funcional
- * ============================================================================
- * @version 5.0
- * - upsert correcto (sem double-fetch)
- * - tema aplicado imediatamente e persistido
- * - modo compacto aplica classe no body
- * - todas as toggles ligadas ao Supabase
+ * DEFINIÇÕES — só opções que têm efeito real na app.
+ * - Aparência e acessibilidade: aplicam-se de imediato (atributos data-* no <html>),
+ *   ficam guardadas no dispositivo e sincronizam com a conta.
+ * - Notificações: gravadas em `notification_settings` (o servidor respeita-as).
+ * - Entregas (empresário): endereço e item predefinidos que pré-preenchem "Nova entrega".
  */
-
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  Accessibility, Bell, BookOpen, CheckCircle, Moon, Monitor, Package, RotateCcw, Shield, Sun, AlertCircle, User,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
-  Bell, Lock, Eye, Globe, Moon, Sun, Smartphone,
-  Mail, MessageSquare, Volume2, Shield, CheckCircle,
-  AlertCircle, Save, RefreshCw, Settings as SettingsIcon
-} from 'lucide-react'
+  A11Y_DEFAULTS, loadLocalA11y, loadLocalCompact, loadThemeMode, pushRemoteSettings, fetchRemoteSettings,
+  saveLocalPrefs, setThemeMode, themeKey, type A11yPrefs, type Role, type TextScale, type ThemeMode,
+} from '../../lib/preferences'
 
-interface UserSettings {
-  email_notifications: boolean
-  push_notifications: boolean
-  sms_notifications: boolean
-  notification_sound: boolean
-  profile_public: boolean
-  show_online_status: boolean
-  share_location: boolean
-  theme: 'dark' | 'light' | 'auto'
-  compact_mode: boolean
-  allow_messages: boolean
-  allow_calls: boolean
-}
+interface Notif { new_delivery: boolean; status_update: boolean; payment_alert: boolean; system_news: boolean }
+const NOTIF_DEFAULTS: Notif = { new_delivery: true, status_update: true, payment_alert: true, system_news: false }
 
-const DEFAULTS: UserSettings = {
-  email_notifications: true,
-  push_notifications: true,
-  sms_notifications: false,
-  notification_sound: true,
-  profile_public: true,
-  show_online_status: true,
-  share_location: true,
-  theme: 'dark',
-  compact_mode: false,
-  allow_messages: true,
-  allow_calls: true,
-}
-
-// ── Aplica tema no documento ──────────────────────────────────────────────────
-const applyTheme = (theme: 'dark' | 'light' | 'auto'): boolean => {
-  let dark: boolean
-  if (theme === 'auto') {
-    dark = window.matchMedia('(prefers-color-scheme: dark)').matches
-  } else {
-    dark = theme === 'dark'
-  }
-  localStorage.setItem('app_theme', theme)
-  // Se o projecto usar classe 'dark' no <html>
-  document.documentElement.classList.toggle('dark', dark)
-  return dark
-}
-
-// ── Aplica modo compacto no body ──────────────────────────────────────────────
-const applyCompact = (compact: boolean) => {
-  document.body.classList.toggle('compact-mode', compact)
-}
+const SCALE_OPTIONS: { v: TextScale; label: string }[] = [
+  { v: 100, label: 'Normal' }, { v: 115, label: 'Grande' }, { v: 130, label: 'Maior' }, { v: 150, label: 'Máximo' },
+]
 
 export default function Settings() {
   const { user } = useAuth()
-  const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState(false)
-  const [success, setSuccess]   = useState(false)
-  const [error, setError]       = useState<string | null>(null)
-  const [isDarkMode, setIsDarkMode] = useState(true)
-  const [settings, setSettings] = useState<UserSettings>(DEFAULTS)
-  // Guarda os valores originais para poder "restaurar"
-  const [original, setOriginal] = useState<UserSettings>(DEFAULTS)
+  const role: Role = user?.role === 'deliverer' ? 'deliverer' : 'entrepreneur'
+  const base = `/${role}`
 
-  // ── Carregar ──────────────────────────────────────────────────────────────
-  const loadSettings = useCallback(async () => {
+  const [a11y, setA11y] = useState<A11yPrefs>(loadLocalA11y)
+  const [compact, setCompact] = useState<boolean>(loadLocalCompact)
+  const [mode, setMode] = useState<ThemeMode>(() => loadThemeMode() ?? (localStorage.getItem(themeKey(role)) === 'light' ? 'light' : 'dark'))
+  const [notif, setNotif] = useState<Notif>(NOTIF_DEFAULTS)
+  const [origin, setOrigin] = useState('')
+  const [itemType, setItemType] = useState('')
+  const [status, setStatus] = useState<{ kind: 'ok' | 'warn' | 'err'; msg: string } | null>(null)
+  const [isDark, setIsDark] = useState(() => localStorage.getItem(themeKey(role)) !== 'light')
+  const timer = useRef<number | undefined>(undefined)
+
+  const flash = useCallback((kind: 'ok' | 'warn' | 'err', msg: string) => {
+    setStatus({ kind, msg })
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => setStatus(null), 3500)
+  }, [])
+
+  // Acompanha o tema do layout
+  useEffect(() => {
+    const h = (e: StorageEvent) => { if (e.key === themeKey(role)) setIsDark(e.newValue !== 'light') }
+    window.addEventListener('storage', h)
+    return () => window.removeEventListener('storage', h)
+  }, [role])
+
+  // Carrega notificações e predefinições da conta
+  useEffect(() => {
     if (!user?.id) return
-    try {
-      setLoading(true)
-      const { data, error: e } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle()           // ← não lança erro se não existir
-
-      if (e) throw e
-
-      if (data) {
-        const loaded: UserSettings = {
-          email_notifications: data.email_notifications ?? DEFAULTS.email_notifications,
-          push_notifications:  data.push_notifications  ?? DEFAULTS.push_notifications,
-          sms_notifications:   data.sms_notifications   ?? DEFAULTS.sms_notifications,
-          notification_sound:  data.notification_sound  ?? DEFAULTS.notification_sound,
-          profile_public:      data.profile_public      ?? DEFAULTS.profile_public,
-          show_online_status:  data.show_online_status  ?? DEFAULTS.show_online_status,
-          share_location:      data.share_location      ?? DEFAULTS.share_location,
-          theme:               data.theme               ?? DEFAULTS.theme,
-          compact_mode:        data.compact_mode        ?? DEFAULTS.compact_mode,
-          allow_messages:      data.allow_messages      ?? DEFAULTS.allow_messages,
-          allow_calls:         data.allow_calls         ?? DEFAULTS.allow_calls,
-        }
-        setSettings(loaded)
-        setOriginal(loaded)
-        const dark = applyTheme(loaded.theme)
-        setIsDarkMode(dark)
-        applyCompact(loaded.compact_mode)
-      }
-    } catch (err: any) {
-      console.error('Erro ao carregar configurações:', err)
-    } finally {
-      setLoading(false)
-    }
+    let off = false
+    ;(async () => {
+      const [n, r] = await Promise.all([
+        supabase.from('notification_settings').select('new_delivery,status_update,payment_alert,system_news').eq('user_id', user.id).maybeSingle(),
+        fetchRemoteSettings(user.id),
+      ])
+      if (off) return
+      if (n.data) setNotif({ ...NOTIF_DEFAULTS, ...n.data })
+      if (r) { setOrigin(r.default_origin_address ?? ''); setItemType(r.default_item_type ?? '') }
+    })()
+    return () => { off = true; window.clearTimeout(timer.current) }
   }, [user?.id])
 
-  useEffect(() => { loadSettings() }, [loadSettings])
-
-  // ── Guardar ───────────────────────────────────────────────────────────────
-  const handleSave = async () => {
+  const persistLook = async (nextA11y: A11yPrefs, nextCompact: boolean, nextMode: ThemeMode) => {
+    saveLocalPrefs(nextA11y, nextCompact)
     if (!user?.id) return
-    setSaving(true); setError(null); setSuccess(false)
-    try {
-      const { error: e } = await supabase
-        .from('user_settings')
-        .upsert(
-          { user_id: user.id, ...settings, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id' }
-        )
-      if (e) throw e
-
-      setOriginal(settings)
-      const dark = applyTheme(settings.theme)
-      setIsDarkMode(dark)
-      applyCompact(settings.compact_mode)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
-    } catch (err: any) {
-      setError(err.message || 'Erro ao guardar configurações')
-    } finally {
-      setSaving(false)
-    }
+    const r = await pushRemoteSettings(user.id, { theme: nextMode, compact_mode: nextCompact }, { accessibility: nextA11y })
+    if (!r.basicOk) flash('warn', 'Guardado neste dispositivo (sem ligação à conta).')
+    else if (!r.extraOk) flash('warn', 'Guardado neste dispositivo. A sincronização entre dispositivos ainda não está activa.')
+    else flash('ok', 'Preferência guardada.')
   }
 
-  // ── Restaurar (volta ao que estava na DB) ─────────────────────────────────
-  const handleRestore = () => {
-    setSettings(original)
-    const dark = applyTheme(original.theme)
-    setIsDarkMode(dark)
-    applyCompact(original.compact_mode)
+  const setA11yKey = <K extends keyof A11yPrefs>(k: K, v: A11yPrefs[K]) => {
+    const next = { ...a11y, [k]: v }
+    setA11y(next); void persistLook(next, compact, mode)
+  }
+  const changeMode = (m: ThemeMode) => {
+    setMode(m); setThemeMode(role, m); void persistLook(a11y, compact, m)
+  }
+  const changeCompact = (c: boolean) => { setCompact(c); void persistLook(a11y, c, mode) }
+  const resetLook = () => {
+    setA11y(A11Y_DEFAULTS); setCompact(false); setMode('dark'); setThemeMode(role, 'dark')
+    void persistLook(A11Y_DEFAULTS, false, 'dark')
   }
 
-  const handleToggle = (key: keyof UserSettings) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }))
+  const changeNotif = async (k: keyof Notif, v: boolean) => {
+    if (!user?.id) return
+    const prev = notif
+    setNotif({ ...notif, [k]: v })
+    const { error } = await supabase.from('notification_settings')
+      .upsert({ user_id: user.id, [k]: v, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    if (error) { setNotif(prev); flash('err', 'Não foi possível guardar. Tente novamente.') } else flash('ok', 'Preferência guardada.')
   }
 
-  const handleThemeChange = (theme: 'dark' | 'light' | 'auto') => {
-    setSettings(prev => ({ ...prev, theme }))
-    const dark = applyTheme(theme)
-    setIsDarkMode(dark)
+  const saveDefaults = async () => {
+    if (!user?.id) return
+    const r = await pushRemoteSettings(user.id, {}, {
+      default_origin_address: origin.trim().slice(0, 200) || null,
+      default_item_type: itemType.trim().slice(0, 80) || null,
+    })
+    flash(r.extraOk ? 'ok' : 'err', r.extraOk ? 'Predefinições guardadas.' : 'Ainda não é possível guardar predefinições (actualização da conta pendente).')
   }
 
-  const dk = (dark: string, light: string) => isDarkMode ? dark : light
-
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500/20 border-t-emerald-500 mx-auto" />
-        <p className="mt-4 text-gray-400">A carregar configurações...</p>
-      </div>
-    </div>
-  )
+  const dk = (d: string, l: string) => (isDark ? d : l)
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-32">
+    <div className="max-w-3xl mx-auto space-y-5 pb-10">
+      <header>
+        <h1 className={`text-2xl font-bold ${dk('text-white', 'text-gray-900')}`}>Definições</h1>
+        <p className={`text-sm mt-1 ${dk('text-gray-400', 'text-gray-600')}`}>
+          As alterações aplicam-se logo e ficam guardadas na sua conta.
+        </p>
+      </header>
 
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className={`p-3 rounded-xl ${dk('bg-emerald-500/10', 'bg-emerald-100')}`}>
-          <SettingsIcon className={dk('text-emerald-400', 'text-emerald-600')} size={24} />
-        </div>
-        <div>
-          <h1 className={`text-2xl font-bold ${dk('text-white', 'text-gray-900')}`}>Configurações</h1>
-          <p className={`text-sm mt-0.5 ${dk('text-gray-400', 'text-gray-600')}`}>Personalize a sua experiência no ZOMAR</p>
-        </div>
-      </div>
-
-      {/* Feedback */}
-      {success && (
-        <div className="p-4 rounded-xl flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20">
-          <CheckCircle className="text-emerald-400" size={20} />
-          <span className="text-emerald-300">Configurações guardadas com sucesso!</span>
-        </div>
-      )}
-      {error && (
-        <div className="p-4 rounded-xl flex items-center gap-3 bg-red-500/10 border border-red-500/20">
-          <AlertCircle className="text-red-400" size={20} />
-          <span className="text-red-300">{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-200">✕</button>
-        </div>
-      )}
-
-      {/* ── Notificações ── */}
-      <Section icon={Bell} iconBg={dk('bg-emerald-500/10', 'bg-emerald-100')}
-        iconColor={dk('text-emerald-400', 'text-emerald-600')}
-        title="Notificações" subtitle="Gira como recebe notificações" isDarkMode={isDarkMode}>
-        <Toggle icon={Mail}         label="Notificações por E-mail"  desc="Actualizações importantes por e-mail"              checked={settings.email_notifications} onChange={() => handleToggle('email_notifications')} isDarkMode={isDarkMode} />
-        <Toggle icon={Smartphone}   label="Notificações Push"        desc="Notificações no seu dispositivo"                  checked={settings.push_notifications}  onChange={() => handleToggle('push_notifications')}  isDarkMode={isDarkMode} />
-        <Toggle icon={MessageSquare} label="Notificações por SMS"    desc="SMS para eventos importantes"                     checked={settings.sms_notifications}   onChange={() => handleToggle('sms_notifications')}   isDarkMode={isDarkMode} />
-        <Toggle icon={Volume2}      label="Som de Notificação"       desc="Reproduzir som ao receber notificações"           checked={settings.notification_sound}  onChange={() => handleToggle('notification_sound')}  isDarkMode={isDarkMode} />
-      </Section>
-
-      {/* ── Privacidade ── */}
-      <Section icon={Shield} iconBg={dk('bg-blue-500/10', 'bg-blue-100')}
-        iconColor={dk('text-blue-400', 'text-blue-600')}
-        title="Privacidade" subtitle="Controle a sua visibilidade" isDarkMode={isDarkMode}>
-        <Toggle icon={Eye}    label="Perfil Público"           desc="Permitir que outros utilizadores vejam o seu perfil"            checked={settings.profile_public}     onChange={() => handleToggle('profile_public')}     isDarkMode={isDarkMode} />
-        <Toggle icon={Globe}  label="Mostrar Status Online"    desc="Exibir quando está online"                                      checked={settings.show_online_status} onChange={() => handleToggle('show_online_status')} isDarkMode={isDarkMode} />
-        <Toggle icon={Lock}   label="Partilhar Localização"    desc="Permitir partilha de localização durante as entregas"           checked={settings.share_location}     onChange={() => handleToggle('share_location')}     isDarkMode={isDarkMode} />
-      </Section>
-
-      {/* ── Aparência ── */}
-      <Section icon={isDarkMode ? Moon : Sun}
-        iconBg={dk('bg-purple-500/10', 'bg-purple-100')}
-        iconColor={dk('text-purple-400', 'text-purple-600')}
-        title="Aparência" subtitle="Personalize o aspecto do sistema" isDarkMode={isDarkMode}>
-
-        <div>
-          <label className={`block text-sm font-medium mb-3 ${dk('text-gray-300', 'text-gray-700')}`}>Tema</label>
-          <div className="grid grid-cols-3 gap-3">
-            {([
-              { value: 'dark',  label: 'Escuro', icon: Moon },
-              { value: 'light', label: 'Claro',  icon: Sun  },
-              { value: 'auto',  label: 'Auto',   icon: RefreshCw },
-            ] as const).map(t => (
-              <button key={t.value} onClick={() => handleThemeChange(t.value)}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  settings.theme === t.value
-                    ? dk('border-emerald-500 bg-emerald-500/10', 'border-emerald-500 bg-emerald-50')
-                    : dk('border-white/10 bg-white/5 hover:border-white/20', 'border-gray-200 bg-gray-50 hover:border-gray-300')
-                }`}>
-                <t.icon className={`mx-auto mb-2 ${
-                  settings.theme === t.value
-                    ? dk('text-emerald-400', 'text-emerald-600')
-                    : dk('text-gray-400', 'text-gray-600')
-                }`} size={22} />
-                <p className={`text-sm font-medium ${
-                  settings.theme === t.value
-                    ? dk('text-emerald-400', 'text-emerald-600')
-                    : dk('text-gray-400', 'text-gray-600')
-                }`}>{t.label}</p>
-              </button>
-            ))}
+      <div role="status" aria-live="polite" className="min-h-[2.75rem]">
+        {status && (
+          <div className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm border ${
+            status.kind === 'ok' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+            : status.kind === 'warn' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+            : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
+            {status.kind === 'ok' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}{status.msg}
           </div>
-        </div>
+        )}
+      </div>
 
-        <Toggle icon={Smartphone} label="Modo Compacto"
-          desc="Interface mais compacta com menos espaçamento"
-          checked={settings.compact_mode}
-          onChange={() => {
-            const next = !settings.compact_mode
-            setSettings(p => ({ ...p, compact_mode: next }))
-            applyCompact(next)
-          }}
-          isDarkMode={isDarkMode} />
-      </Section>
+      <Card icon={Moon} title="Aparência" sub="Tema e densidade do ecrã" dark={isDark}>
+        <Radio label="Tema" dark={isDark} value={mode} onChange={v => changeMode(v as ThemeMode)}
+          options={[{ v: 'dark', label: 'Escuro', icon: Moon }, { v: 'light', label: 'Claro', icon: Sun }, { v: 'auto', label: 'Automático', icon: Monitor }]} />
+        <p className={`text-xs ${dk('text-gray-400', 'text-gray-600')}`}>Automático segue o tema do telemóvel ou computador.</p>
+        <Switch label="Modo compacto" desc="Menos espaçamento: mais informação visível no ecrã." checked={compact} onChange={changeCompact} dark={isDark} />
+      </Card>
 
-      {/* ── Comunicação ── */}
-      <Section icon={MessageSquare} iconBg={dk('bg-yellow-500/10', 'bg-yellow-100')}
-        iconColor={dk('text-yellow-400', 'text-yellow-600')}
-        title="Comunicação" subtitle="Preferências de comunicação" isDarkMode={isDarkMode}>
-        <Toggle icon={MessageSquare} label="Permitir Mensagens" desc="Receber mensagens de outros utilizadores"           checked={settings.allow_messages} onChange={() => handleToggle('allow_messages')} isDarkMode={isDarkMode} />
-        <Toggle icon={Smartphone}    label="Permitir Chamadas"  desc="Receber chamadas relacionadas a entregas"           checked={settings.allow_calls}    onChange={() => handleToggle('allow_calls')}    isDarkMode={isDarkMode} />
-      </Section>
+      <Card icon={Accessibility} title="Acessibilidade" sub="Ajuste a app às suas necessidades" dark={isDark}>
+        <Radio label="Tamanho do texto" dark={isDark} value={String(a11y.textScale)} onChange={v => setA11yKey('textScale', Number(v) as TextScale)}
+          options={SCALE_OPTIONS.map(o => ({ v: String(o.v), label: o.label }))} />
+        <Switch label="Alto contraste" desc="Texto e bordas mais fortes para ler melhor, sobretudo ao sol." checked={a11y.contrast === 'high'} onChange={c => setA11yKey('contrast', c ? 'high' : 'normal')} dark={isDark} />
+        <Switch label="Reduzir animações" desc="Remove movimentos e transições. Útil se tem sensibilidade ao movimento." checked={a11y.motion === 'reduce'} onChange={c => setA11yKey('motion', c ? 'reduce' : 'system')} dark={isDark} />
+        <Switch label="Letra de leitura fácil" desc="Tipo de letra mais espaçado e com formas bem distintas." checked={a11y.readableFont} onChange={c => setA11yKey('readableFont', c)} dark={isDark} />
+        <Switch label="Destaque forte do foco" desc="Contorno amarelo bem visível ao navegar com o teclado." checked={a11y.strongFocus} onChange={c => setA11yKey('strongFocus', c)} dark={isDark} />
+        <Switch label="Botões maiores" desc="Áreas de toque maiores, mais fáceis de acertar com o dedo." checked={a11y.bigTargets} onChange={c => setA11yKey('bigTargets', c)} dark={isDark} />
+        <button type="button" onClick={resetLook}
+          className={`inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg border ${dk('border-white/15 text-gray-200 hover:bg-white/5', 'border-gray-300 text-gray-700 hover:bg-gray-100')}`}>
+          <RotateCcw size={14} /> Repor aparência e acessibilidade
+        </button>
+      </Card>
 
-      {/* ── Acções fixas no fundo ── */}
-      <div className={`fixed bottom-[calc(3.9rem+env(safe-area-inset-bottom))] lg:bottom-0 left-0 right-0 lg:left-60 z-20 flex gap-3 p-3 sm:p-4 border-t backdrop-blur-lg ${
-        dk('bg-[#121212]/90 border-white/5', 'bg-white/90 border-gray-200')
-      }`}>
-        <div className="max-w-4xl mx-auto w-full flex gap-3">
-          <button onClick={handleRestore} disabled={saving}
-            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all ${
-              dk('bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10',
-                 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200')
-            }`}>
-            Restaurar
+      <Card icon={Bell} title="Notificações" sub="O que quer receber dentro da app" dark={isDark}>
+        {role === 'deliverer' && (
+          <Switch label="Novas entregas disponíveis" desc="Aviso quando um empresário publica uma entrega." checked={notif.new_delivery} onChange={v => changeNotif('new_delivery', v)} dark={isDark} />
+        )}
+        <Switch label="Estado das entregas" desc="Aceite, recolhida, concluída. Cancelamentos e problemas chegam sempre." checked={notif.status_update} onChange={v => changeNotif('status_update', v)} dark={isDark} />
+        <Switch label="Pagamentos e subscrição" desc="Recibos e fim do período de teste. Falhas de pagamento chegam sempre." checked={notif.payment_alert} onChange={v => changeNotif('payment_alert', v)} dark={isDark} />
+        <Switch label="Novidades da ZOMAR" desc="Anúncios e novas funcionalidades." checked={notif.system_news} onChange={v => changeNotif('system_news', v)} dark={isDark} />
+      </Card>
+
+      {role === 'entrepreneur' && (
+        <Card icon={Package} title="Predefinições de entrega" sub="Pré-preenchem o formulário “Nova entrega”" dark={isDark}>
+          <Field label="Endereço de recolha habitual" dark={isDark} value={origin} onChange={setOrigin} max={200} placeholder="Ex.: Av. 24 de Julho, 1200, Maputo" />
+          <Field label="Tipo de item habitual" dark={isDark} value={itemType} onChange={setItemType} max={80} placeholder="Ex.: Encomenda de roupa" />
+          <button type="button" onClick={saveDefaults}
+            className={`px-4 py-2.5 rounded-xl font-semibold text-sm ${dk('bg-emerald-500 text-black hover:bg-emerald-400', 'bg-emerald-600 text-white hover:bg-emerald-700')}`}>
+            Guardar predefinições
           </button>
-          <button onClick={handleSave} disabled={saving}
-            className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-              saving
-                ? dk('bg-gray-700 cursor-not-allowed text-gray-400', 'bg-gray-300 cursor-not-allowed text-gray-500')
-                : dk('bg-emerald-500 hover:bg-emerald-400 text-black', 'bg-emerald-600 hover:bg-emerald-700 text-white')
-            }`}>
-            {saving
-              ? <><div className="animate-spin rounded-full h-5 w-5 border-2 border-black/20 border-t-black" />A guardar...</>
-              : <><Save size={18} />Guardar Alterações</>}
-          </button>
+        </Card>
+      )}
+
+      <Card icon={Shield} title="Conta e ajuda" sub="Perfil, guia e suporte" dark={isDark}>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <LinkTile to={`${base}/profile`} icon={User} label="Perfil e palavra-passe" dark={isDark} />
+          <LinkTile to={`${base}/help`} icon={BookOpen} label="Central de ajuda" dark={isDark} />
         </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Componentes ──────────────────────────────────────────────────────────────
+function Card({ icon: Icon, title, sub, dark, children }: { icon: LucideIcon; title: string; sub: string; dark: boolean; children: ReactNode }) {
+  return (
+    <section className={`rounded-2xl border p-5 space-y-4 ${dark ? 'bg-[#121212] border-white/10' : 'bg-white border-gray-200'}`}>
+      <div className="flex items-center gap-3">
+        <div className={`p-2.5 rounded-xl ${dark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}><Icon size={20} aria-hidden /></div>
+        <div>
+          <h2 className={`text-base font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
+          <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{sub}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function Switch({ label, desc, checked, onChange, dark }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void; dark: boolean }) {
+  return (
+    <div className={`flex items-center justify-between gap-4 p-3 rounded-xl border ${dark ? 'border-white/5' : 'border-gray-200'}`}>
+      <div className="min-w-0">
+        <p className={`font-medium text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{label}</p>
+        <p className={`text-xs mt-0.5 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{desc}</p>
+      </div>
+      <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
+        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors ${checked ? 'bg-emerald-500' : dark ? 'bg-gray-600' : 'bg-gray-400'}`}>
+        <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
+      </button>
+    </div>
+  )
+}
+
+function Radio({ label, options, value, onChange, dark }: {
+  label: string; options: { v: string; label: string; icon?: LucideIcon }[]; value: string; onChange: (v: string) => void; dark: boolean
+}) {
+  return (
+    <div role="radiogroup" aria-label={label}>
+      <p className={`text-sm font-medium mb-2 ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{label}</p>
+      <div className={`grid gap-2 ${options.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+        {options.map(o => {
+          const on = value === o.v
+          return (
+            <button key={o.v} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.v)}
+              className={`py-3 px-2 rounded-xl border-2 text-sm font-medium flex flex-col items-center gap-1 transition-colors ${
+                on ? 'border-emerald-500 bg-emerald-500/10 ' + (dark ? 'text-emerald-300' : 'text-emerald-800')
+                   : (dark ? 'border-white/10 text-gray-300 hover:border-white/25' : 'border-gray-200 text-gray-700 hover:border-gray-400')}`}>
+              {o.icon && <o.icon size={18} aria-hidden />}{o.label}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// ── Sub-componentes ───────────────────────────────────────────────────────────
-
-interface SectionProps {
-  icon: any; iconBg: string; iconColor: string
-  title: string; subtitle: string; isDarkMode: boolean
-  children: React.ReactNode
-}
-
-function Section({ icon: Icon, iconBg, iconColor, title, subtitle, isDarkMode, children }: SectionProps) {
+function Field({ label, value, onChange, max, placeholder, dark }: { label: string; value: string; onChange: (v: string) => void; max: number; placeholder: string; dark: boolean }) {
   return (
-    <div className={`rounded-2xl border p-6 ${isDarkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
-      <div className="flex items-center gap-3 mb-6">
-        <div className={`p-3 rounded-xl ${iconBg}`}>
-          <Icon className={iconColor} size={22} />
-        </div>
-        <div>
-          <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{subtitle}</p>
-        </div>
-      </div>
-      <div className="space-y-3">{children}</div>
-    </div>
+    <label className="block">
+      <span className={`text-sm font-medium ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{label}</span>
+      <input value={value} maxLength={max} placeholder={placeholder} onChange={e => onChange(e.target.value)}
+        className={`mt-1.5 w-full px-3 py-2.5 rounded-xl border text-sm ${dark ? 'bg-black/30 border-white/15 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`} />
+    </label>
   )
 }
 
-interface ToggleProps {
-  icon: any; label: string; desc: string
-  checked: boolean; onChange: () => void; isDarkMode: boolean
-}
-
-function Toggle({ icon: Icon, label, desc, checked, onChange, isDarkMode }: ToggleProps) {
+function LinkTile({ to, icon: Icon, label, dark }: { to: string; icon: LucideIcon; label: string; dark: boolean }) {
   return (
-    <div className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${
-      isDarkMode ? 'border-white/5 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-50'
-    }`} onClick={onChange}>
-      <div className="flex items-start gap-3 flex-1 pointer-events-none">
-        <Icon className={`mt-0.5 flex-shrink-0 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} size={18} />
-        <div>
-          <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{label}</p>
-          <p className={`text-sm mt-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{desc}</p>
-        </div>
-      </div>
-      {/* Toggle visual */}
-      <div className={`relative inline-flex items-center flex-shrink-0 ml-4 w-11 h-6 rounded-full transition-colors duration-200 ${
-        checked ? 'bg-emerald-500' : isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
-      }`}>
-        <span className={`inline-block w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${
-          checked ? 'translate-x-5' : 'translate-x-0.5'
-        }`} />
-      </div>
-    </div>
+    <Link to={to} className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-medium ${dark ? 'border-white/10 text-gray-200 hover:bg-white/5' : 'border-gray-200 text-gray-800 hover:bg-gray-50'}`}>
+      <Icon size={16} aria-hidden /> {label}
+    </Link>
   )
 }
