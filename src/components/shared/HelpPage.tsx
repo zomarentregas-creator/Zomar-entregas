@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { openGuide } from './OnboardingGuide'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -257,6 +258,12 @@ export default function HelpPage() {
             <p className={`text-base mt-2 ${dk('text-gray-400', 'text-gray-600')}`}>
               Encontre respostas rápidas ou entre em contacto connosco
             </p>
+            {user?.role !== 'admin' && (
+              <button type="button" onClick={openGuide}
+                className="mt-4 inline-flex items-center gap-2 min-h-[44px] px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/20">
+                <Zap size={16} /> Ver guia rápido
+              </button>
+            )}
           </div>
         </div>
 
