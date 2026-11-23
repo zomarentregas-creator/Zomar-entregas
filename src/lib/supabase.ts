@@ -32,15 +32,14 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 })
 
-// Limpar sessões corrompidas ao iniciar
+// Limpa a sessão só quando o token é mesmo inválido (refresh token revogado/em falta).
+// Erros de rede ou lentidão NÃO apagam a sessão: antes isto deslogava ao actualizar a página.
 const limparSessoesInvalidas = async () => {
   try {
     const { error } = await supabase.auth.getSession()
-    if (error) {
-      console.warn('⚠️ Sessão inválida, limpando storage...', error.message)
-      localStorage.removeItem('supabase-auth')
-      sessionStorage.clear()
-      await supabase.auth.signOut()
+    if (error && /refresh token|invalid.*token/i.test(error.message)) {
+      console.warn('⚠️ Token inválido, a terminar sessão local...', error.message)
+      await supabase.auth.signOut({ scope: 'local' })
     }
   } catch (err) {
     console.warn('⚠️ Erro ao verificar sessão:', err)
