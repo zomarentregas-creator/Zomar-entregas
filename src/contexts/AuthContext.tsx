@@ -31,6 +31,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Cópia local do perfil (sem dados sensíveis) para restaurar a sessão de imediato
+// ao actualizar a página e para sobreviver a falhas temporárias de rede.
+const USER_CACHE_KEY = 'zomar-user-cache'
+const readCachedUser = (): User | null => {
+  try {
+    const raw = localStorage.getItem(USER_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as User) : null
+  } catch { return null }
+}
+const writeCachedUser = (u: User | null) => {
+  try {
+    if (u) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(u))
+    else localStorage.removeItem(USER_CACHE_KEY)
+  } catch { /* storage indisponível */ }
+}
+
+/** failed=true: erro temporário (rede/timeout) — NÃO significa "sem perfil". */
+interface ProfileResult { user: User | null; failed: boolean }
+
 // ============================================
 // PROVIDER
 // ============================================
@@ -42,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionCheckTimeout = useRef<NodeJS.Timeout | null>(null)
 
   // ✅ Buscar perfil completo do usuário
-  const fetchUserProfile = useCallback(async (authUserId: string): Promise<User | null> => {
+  const fetchUserProfile = useCallback(async (authUserId: string): Promise<ProfileResult> => {
     try {
 
       const controller = new AbortController()
@@ -61,19 +80,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Perfil não encontrado → criar
         if (!profile && !error) {
           console.warn('⚠️ AuthContext - Perfil não encontrado, criando...')
-          return await createUserProfile(authUserId)
+          return { user: await createUserProfile(authUserId), failed: false }
         }
 
         if (error) {
           console.error('❌ AuthContext - Erro ao buscar perfil:', error)
-          return null
+          return { user: null, failed: true }
         }
 
         // Admins sempre têm role definida no BD — nunca vão para RoleSelection
         // Perfil sem role → força RoleSelection (apenas entrepreneur/deliverer novos)
         if (!profile.role) {
-          
-          return null
+          return { user: null, failed: false }
         }
 
         const userData: User = {
@@ -87,9 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         
-        
-
-        return userData
+        return { user: userData, failed: false }
       } catch (err: any) {
         clearTimeout(timeoutId)
         if (err.name === 'AbortError') {
@@ -99,9 +115,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (err: any) {
       console.error('❌ AuthContext - Erro ao processar perfil:', err)
-      return null
+      return { user: null, failed: true }
     }
   }, [])
+
+  /** Aplica o resultado do perfil: em falha temporária mantém o utilizador actual. */
+  const applyProfile = useCallback(async (authUserId: string) => {
+    const { user: profile, failed } = await fetchUserProfile(authUserId)
+    if (failed) {
+      // Sessão válida mas perfil indisponível agora: não deslogar.
+      setUser(prev => prev ?? readCachedUser())
+      return
+    }
+    setUser(profile)
+    writeCachedUser(profile)
+  }, [fetchUserProfile])
 
   // ✅ Criar perfil para novos utilizadores (Google OAuth, etc.)
   // CORRECÇÃO: trust_score adicionado para evitar erro no trigger trg_log_profile_change
@@ -165,14 +193,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id)
-        setUser(profile)
-      }
+      if (session?.user) await applyProfile(session.user.id)
     } catch (error) {
       console.error('❌ AuthContext - Erro ao atualizar usuário:', error)
     }
-  }, [fetchUserProfile])
+  }, [applyProfile])
 
   // ============================================
   // VERIFICAR SESSÃO INICIAL
@@ -183,40 +208,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initializeAuth = async () => {
       try {
-
         if (sessionCheckTimeout.current) clearTimeout(sessionCheckTimeout.current)
 
-        const sessionPromise = supabase.auth.getSession()
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          sessionCheckTimeout.current = setTimeout(() => {
-            reject(new Error('Timeout ao verificar sessão'))
-          }, 5000)
-        })
+        // Restauro imediato: se há sessão guardada, mostra a app já com o perfil em cache.
+        const cached = readCachedUser()
+        if (cached) { setUser(cached); setLoading(false) }
 
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any
-
+        const TIMEOUT = Symbol('timeout')
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<typeof TIMEOUT>((resolve) => {
+            sessionCheckTimeout.current = setTimeout(() => resolve(TIMEOUT), 8000)
+          }),
+        ])
         if (sessionCheckTimeout.current) clearTimeout(sessionCheckTimeout.current)
 
+        if (result === TIMEOUT) {
+          // Rede lenta: mantém o que há em cache; o listener actualiza quando a sessão chegar.
+          console.warn('⏱️ AuthContext - getSession lento; a manter sessão em cache')
+          return
+        }
+
+        const { data: { session }, error } = result
         if (error) {
           console.error('❌ Erro ao verificar sessão:', error)
-          setUser(null)
+          // Só desloga se o token for mesmo inválido; erros de rede mantêm a sessão.
+          if (/refresh token|invalid.*token|jwt/i.test(error.message)) {
+            setUser(null); writeCachedUser(null)
+          }
           return
         }
 
         if (session?.user) {
-          
-          const profile = await fetchUserProfile(session.user.id)
-          setUser(profile)
+          await applyProfile(session.user.id)
         } else {
-          
-          setUser(null)
+          setUser(null); writeCachedUser(null)
         }
       } catch (error: any) {
         console.error('❌ AuthContext - Erro na inicialização:', error.message)
-        setUser(null)
+        // Falha inesperada: não apaga a sessão.
       } finally {
         setLoading(false)
       }
@@ -224,25 +254,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-
-        if (event === 'SIGNED_OUT') {
-          setUser(null)
-        } else if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id)
-          setUser(profile)
-        }
-
+    // IMPORTANTE: o callback não pode fazer `await` a chamadas do Supabase (bloqueia o
+    // cliente). Adia o trabalho com setTimeout e ignora eventos que não mudam o perfil.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null); writeCachedUser(null); setLoading(false)
+        return
+      }
+      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
+      if (session?.user) {
+        const uid = session.user.id
+        setTimeout(() => { applyProfile(uid).finally(() => setLoading(false)) }, 0)
+      } else {
         setLoading(false)
       }
-    )
+    })
 
     return () => {
       subscription.unsubscribe()
       if (sessionCheckTimeout.current) clearTimeout(sessionCheckTimeout.current)
     }
-  }, [fetchUserProfile])
+  }, [applyProfile])
 
   // ============================================
   // LOGIN
@@ -263,8 +295,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Erro ao fazer login' }
       }
 
-      const profile = await fetchUserProfile(data.user.id)
-      setUser(profile)
+      const { user: profile } = await fetchUserProfile(data.user.id)
+      setUser(profile); writeCachedUser(profile)
       return { success: true }
     } catch (err: any) {
       console.error('❌ AuthContext - Exceção no login:', err)
@@ -338,8 +370,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const profile = await fetchUserProfile(authData.user.id)
-      setUser(profile)
+      const { user: profile } = await fetchUserProfile(authData.user.id)
+      setUser(profile); writeCachedUser(profile)
       return { success: true }
     } catch (err: any) {
       console.error('❌ AuthContext - Exceção no cadastro:', err)
@@ -357,11 +389,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       await supabase.auth.signOut()
       localStorage.removeItem('supabase-auth')
+      writeCachedUser(null)
       sessionStorage.clear()
       setUser(null)
     } catch (error) {
       console.error('❌ AuthContext - Erro ao fazer logout:', error)
       setUser(null)
+      writeCachedUser(null)
       localStorage.removeItem('supabase-auth')
     } finally {
       setLoading(false)

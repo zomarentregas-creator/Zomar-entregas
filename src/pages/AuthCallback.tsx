@@ -3,9 +3,11 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Truck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function AuthCallback() {
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
   const [status, setStatus] = useState<'loading' | 'error'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
   const processed = useRef(false)
@@ -50,31 +52,22 @@ export default function AuthCallback() {
         }
 
         // 4. CASO 2: FLUXO IMPLÍCITO (access_token no hash)
+        // O cliente Supabase processa o hash ao ser criado (antes de este componente
+        // montar). Em PCs rápidos o evento SIGNED_IN já passou quando nos subscrevemos,
+        // por isso NÃO se pode depender dele: pergunta-se pela sessão (getSession espera
+        // pelo fim da inicialização) e, se ainda não estiver, tenta-se de novo.
         const accessToken = hashParams.get('access_token')
         if (accessToken) {
-          console.log('🔑 Fluxo implícito detectado, aguardando evento SIGNED_IN...')
-          
-          // O Supabase já processa o hash automaticamente e dispara SIGNED_IN
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-              console.log('📡 Evento de auth:', event)
-              
-              if (event === 'SIGNED_IN' && session?.user) {
-                subscription.unsubscribe()
-                await handleUserRedirection(session.user.id)
-              }
+          console.log('🔑 Fluxo implícito detectado, a obter sessão...')
+          for (let i = 0; i < 20; i++) {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) {
+              await handleUserRedirection(session.user.id)
+              return
             }
-          )
-
-          // Timeout de segurança
-          setTimeout(() => {
-            subscription.unsubscribe()
-            if (status === 'loading') {
-              throw new Error('Tempo excedido ao aguardar autenticação')
-            }
-          }, 10000)
-
-          return
+            await new Promise(r => setTimeout(r, 500))
+          }
+          throw new Error('Tempo excedido ao aguardar autenticação')
         }
 
         // 5. CASO 3: JÁ TEM SESSÃO
@@ -103,6 +96,7 @@ export default function AuthCallback() {
     // Função auxiliar para redirecionar baseado na role
     const handleUserRedirection = async (userId: string) => {
       try {
+        await refreshUser()   // garante o utilizador no contexto antes de navegar
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('role')
