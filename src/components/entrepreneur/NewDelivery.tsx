@@ -201,20 +201,7 @@ export default function NewDelivery() {
 
       // O uso do plano é contado no servidor (trigger enforce_delivery_subscription_quota)
 
-      // Checkpoint inicial
-      try {
-        await supabase.from('delivery_checkpoints').insert({
-          delivery_id: delivery.id,
-          // FIX: coluna 'status' em vez de 'checkpoint_type', 'description' em vez de 'notes'
-          status:      deliveryStatus,
-          description: isScheduled
-            ? `Entrega agendada para ${scheduledDate} entre ${windowStart} e ${windowEnd}`
-            : 'Entrega criada e disponível para entregadores',
-          created_at: new Date().toISOString(),
-        })
-      } catch (cpErr) {
-        console.warn('[NewDelivery] checkpoint insert failed:', cpErr)
-      }
+      // O histórico (checkpoints) é registado no servidor (trigger log_delivery_checkpoint)
 
       // Os entregadores são avisados no servidor (trigger notify_new_delivery)
 

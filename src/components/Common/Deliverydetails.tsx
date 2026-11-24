@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import TrackingTimeline from '../shared/TrackingTimeline'
+import { buildSteps, trackingUrl, trackingShareText } from '../../lib/tracking'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,7 @@ interface DeliveryFull {
   delivered_at:        string | null
   picked_up_at:        string | null
   delivery_code?:      string | null
+  tracking_code?:      string | null
   // enriquecido
   entrepreneur_name?:  string
   entrepreneur_phone?: string
@@ -100,6 +103,7 @@ export default function DeliveryDetails() {
   const [codeCopied,   setCodeCopied]   = useState(false)
   const [codeData,     setCodeData]     = useState<string | null>(null)
   const [codeLoading,  setCodeLoading]  = useState(false)
+  const [linkCopied,   setLinkCopied]   = useState(false)
 
   // Modal de acção (entregador)
   const [actionModal,  setActionModal]  = useState<'collect' | 'deliver' | null>(null)
@@ -211,14 +215,6 @@ export default function DeliveryDetails() {
           .eq('id', delivery.id)
         if (error) throw error
 
-        try {
-          await supabase.from('delivery_checkpoints').insert({
-            delivery_id: delivery.id, status: 'in_progress',
-            description: 'Item recolhido pelo entregador',
-            created_at:  new Date().toISOString(),
-          })
-        } catch { /* silencioso */ }
-
         setFeedback({ type: 'ok', msg: '📦 Item recolhido com sucesso!' })
         setActionModal(null)
         load()
@@ -241,14 +237,6 @@ export default function DeliveryDetails() {
           setActionLoading(false)
           return
         }
-
-        try {
-          await supabase.from('delivery_checkpoints').insert({
-            delivery_id: delivery.id, status: 'completed',
-            description: 'Entrega concluída — código verificado',
-            created_at:  new Date().toISOString(),
-          })
-        } catch { /* silencioso */ }
 
         setFeedback({ type: 'ok', msg: '✅ Entrega concluída com sucesso!' })
         setActionModal(null)
@@ -579,11 +567,42 @@ export default function DeliveryDetails() {
         </div>
       )}
 
+      {/* Progresso + partilha do rastreio */}
+      {delivery && (
+        <div className={`${card} p-5`}>
+          <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dk('text-gray-500', 'text-gray-400')}`}>
+            Progresso
+          </h3>
+          <TrackingTimeline dark={isDarkMode} steps={buildSteps(delivery.current_status, checkpoints)} />
+          {!isDeliverer && delivery.tracking_code && !isCancelled && (
+            <div className={`mt-2 pt-4 border-t ${dk('border-white/10', 'border-gray-100')}`}>
+              <p className={`text-xs mb-3 ${dk('text-gray-400', 'text-gray-600')}`}>
+                Partilhe com o seu cliente para ele acompanhar a entrega sem criar conta.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => {
+                  navigator.clipboard?.writeText(trackingUrl(delivery.tracking_code!)).then(() => {
+                    setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000)
+                  }).catch(() => { /* sem permissão de área de transferência */ })
+                }} className={`px-4 py-2 rounded-xl text-sm font-medium border ${dk('border-white/15 text-gray-200 hover:bg-white/5', 'border-gray-300 text-gray-700 hover:bg-gray-50')}`}>
+                  {linkCopied ? 'Link copiado ✓' : 'Copiar link'}
+                </button>
+                <a href={`https://wa.me/?text=${encodeURIComponent(trackingShareText(delivery.item_type, delivery.tracking_code))}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl text-sm font-bold bg-green-500 hover:bg-green-400 text-black">
+                  Enviar por WhatsApp
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Timeline de checkpoints */}
       {checkpoints.length > 0 && (
         <div className={`${card} p-5`}>
           <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dk('text-gray-500', 'text-gray-400')}`}>
-            Histórico
+            Histórico detalhado
           </h3>
           <div className="space-y-3">
             {checkpoints.map((cp, i) => (

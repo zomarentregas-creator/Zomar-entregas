@@ -38,6 +38,7 @@ import AdminBroadcast from './pages/admin/AdminBroadcast'
 import Profile from './components/shared/Profile'
 import Notifications from './components/shared/Notifications'
 import Settings from './components/shared/Settings'
+import TrackingPage from './pages/TrackingPage'
 import HelpPage from './components/shared/HelpPage'
 import TermsPage from './components/shared/TermsPage'
 
@@ -261,6 +262,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/role-selection" element={<RoleSelection />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/rastreio/:code" element={<TrackingPage />} />
 
         {/* Redirect inteligente pela role */}
         <Route path="/dashboard" element={<RoleGuard />} />
