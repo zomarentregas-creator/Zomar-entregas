@@ -167,7 +167,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         .zomar-scrollbar::-webkit-scrollbar-thumb:hover { background:rgba(249,115,22,0.4); }
         .zomar-select option { background:${isDark ? '#1a1a1a' : '#ffffff'}; color:${isDark ? '#f3f4f6' : '#111827'}; }
         @keyframes pageIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        .page-enter { animation:pageIn 0.22s ease-out forwards; }
+        /* sem 'forwards': um transform permanente criaria um contentor para todos os modais position:fixed */
+        .page-enter { animation:pageIn 0.22s ease-out; }
       `}</style>
 
       <div className={`min-h-screen flex isolate transition-colors duration-300 ${isDark ? 'zt zm-dark bg-[#0a0f14] text-white' : 'bg-gray-50 text-gray-900'}`}>
