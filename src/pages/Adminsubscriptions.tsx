@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
 import ReactDOM from 'react-dom'
 import AdminLayout from '../components/Admin/Adminlayout'
+import PendingRequests from '../components/Admin/PendingRequests'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
 import {
@@ -442,6 +443,8 @@ export default function AdminSubscriptions() {
             Actualizar
           </button>
         </div>
+
+        <PendingRequests isDark={isDark} notify={showToast} onChanged={() => { void load() }} />
 
         {/* ── KPI Cards ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

@@ -6,6 +6,8 @@ import { useTheme } from '../../contexts/ThemeContext'
 import '../../styles/zomar-motion.css'
 import '../../styles/zomar-theme.css'
 import Aurora from '../Common/Aurora'
+import AdminInbox from './AdminInbox'
+import { supabase } from '../../lib/supabase'
 import {
   LayoutDashboard, Users, Package, Settings, LogOut,
   Menu, X, Shield, ChevronRight, Sun, Moon, Bell,
@@ -32,6 +34,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { user, signOut } = useAuth()
+
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  useEffect(() => {
+    let off = false
+    const run = async () => {
+      const [a, b] = await Promise.all([
+        supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('withdrawals').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      ])
+      if (!off) setCounts({ '/admin/subscriptions': a.count ?? 0, '/admin/withdrawals': b.count ?? 0 })
+    }
+    void run()
+    const t = window.setInterval(run, 30_000)
+    return () => { off = true; window.clearInterval(t) }
+  }, [location.pathname])
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { setSidebarOpen(false) }, [location.pathname])
@@ -64,6 +81,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         )}
         <Icon size={17} className={`flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${active ? (isDark ? 'text-emerald-400' : 'text-emerald-500') : ''}`}/>
         <span className="flex-1 text-left">{item.label}</span>
+        {(counts[item.path] ?? 0) > 0 && (
+          <span aria-label={`${counts[item.path]} pendentes`} className="min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-black text-[11px] font-bold flex items-center justify-center">{counts[item.path]}</span>
+        )}
         {active && <ChevronRight size={13} className={isDark ? 'text-emerald-400/50' : 'text-emerald-400/60'}/>}
       </button>
     )
@@ -191,11 +211,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className={`hidden lg:flex items-center justify-center w-8 h-8 rounded-lg transition-all ${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/8' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
                 {isDark ? <Sun size={17}/> : <Moon size={17}/>}
               </button>
-              <button onClick={() => navigate('/admin/broadcast')}
-                className={`relative w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:bg-gray-100'}`}>
-                <Bell size={17}/>
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-emerald-400 rounded-full"/>
-              </button>
+              <AdminInbox isDark={isDark} />
             </div>
           </header>
 
