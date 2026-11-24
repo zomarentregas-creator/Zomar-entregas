@@ -39,6 +39,7 @@ export default function AdminWithdrawals() {
   const [reason, setReason] = useState('')
   const [payFor, setPayFor] = useState<Withdrawal | null>(null)
   const [payRef, setPayRef] = useState('')
+  const [payDest, setPayDest] = useState<string | null>(null)
 
   const dk = (d: string, l: string) => (isDark ? d : l)
   const say = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500) }
@@ -60,6 +61,34 @@ export default function AdminWithdrawals() {
   }, [filter])
 
   useEffect(() => { void load() }, [load])
+
+  // Dados bancários estão cifrados na base de dados: só se decifram ao pagar, com registo de auditoria
+  useEffect(() => {
+    if (!payFor) { setPayDest(null); return }
+    let alive = true
+    setPayDest('A obter dados de pagamento…')
+    void supabase.rpc('admin_get_withdrawal_destination', { p_id: payFor.id }).then(({ data, error }) => {
+      if (!alive) return
+      if (error || !data) { setPayDest(payFor.phone_number || 'Não foi possível obter os dados de pagamento.'); return }
+      const b = data.bank as { bankName?: string; accountHolder?: string; nib?: string } | null
+      setPayDest(b ? `${b.bankName ?? ''} · ${b.accountHolder ?? ''} · NIB ${b.nib ?? ''}` : (data.phone ?? '—'))
+    })
+    return () => { alive = false }
+  }, [payFor])
+
+  // Dados bancários estão cifrados na base de dados: só se decifram ao pagar, com registo de auditoria
+  useEffect(() => {
+    if (!payFor) { setPayDest(null); return }
+    let alive = true
+    setPayDest('A obter dados de pagamento…')
+    void supabase.rpc('admin_get_withdrawal_destination', { p_id: payFor.id }).then(({ data, error }) => {
+      if (!alive) return
+      if (error || !data) { setPayDest(payFor.phone_number || 'Não foi possível obter os dados de pagamento.'); return }
+      const b = data.bank as { bankName?: string; accountHolder?: string; nib?: string } | null
+      setPayDest(b ? `${b.bankName ?? ''} · ${b.accountHolder ?? ''} · NIB ${b.nib ?? ''}` : (data.phone ?? '—'))
+    })
+    return () => { alive = false }
+  }, [payFor])
 
   const notify = (w: Withdrawal, title: string, message: string, type: string) =>
     supabase.from('notifications').insert({ user_id: w.user_id, title, message, type, read: false })
@@ -137,7 +166,7 @@ export default function AdminWithdrawals() {
           <div className="space-y-3">
             {rows.map(w => {
               const st = STATUS[w.status] ?? STATUS.pending
-              const dest = w.phone_number || w.bank_data || '—'
+              const dest = w.phone_number || (w.bank_data ? 'Transferência bancária' : '—')
               return (
                 <div key={w.id} className={`${card} p-4`}>
                   <div className="flex items-start justify-between gap-3">
@@ -184,7 +213,8 @@ export default function AdminWithdrawals() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setPayFor(null)}>
             <div className={`w-full max-w-sm rounded-2xl border p-5 ${dk('bg-[#0d1318] border-white/10', 'bg-white border-gray-200')}`} onClick={e => e.stopPropagation()}>
               <h3 className={`font-bold mb-1 ${dk('text-white', 'text-gray-900')}`}>Confirmar pagamento</h3>
-              <p className="text-xs text-gray-500 mb-3">Pague {fmt(payFor.net_amount ?? payFor.amount)} a {payFor.name} ({payFor.phone_number || 'transferência bancária'}) e registe a referência da transacção. O entregador vê esta referência como comprovativo.</p>
+              <p className="text-xs text-gray-500 mb-3">Pague {fmt(payFor.net_amount ?? payFor.amount)} a {payFor.name} e registe a referência da transacção. O entregador vê esta referência como comprovativo.</p>
+              <p className={`text-sm font-semibold mb-3 break-all ${dk('text-emerald-300', 'text-emerald-700')}`}>{payDest}</p>
               <input value={payRef} onChange={e => setPayRef(e.target.value)} maxLength={80} placeholder="Ex.: código M-Pesa / n.º da transferência"
                 className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none ${dk('bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-emerald-500/50', 'bg-gray-50 border-gray-200')}`} />
               <div className="flex gap-2 mt-3">
