@@ -241,19 +241,6 @@ export default function MyDeliveries() {
         }
       }
 
-      // Checkpoint — falha silenciosa
-      try {
-        await supabase.from('delivery_checkpoints').insert({
-          delivery_id: deliveryId,
-          status: newStatus,
-          description:
-            newStatus === 'in_progress' ? 'Item recolhido pelo entregador' :
-            newStatus === 'completed'   ? 'Entrega concluída com sucesso'  :
-            `Status atualizado: ${newStatus}`,
-          created_at: new Date().toISOString(),
-        })
-      } catch { /* silencioso */ }
-
       // ── Notificar empreendedor sobre mudança de estado ────────────────────
       if (newStatus === 'in_progress') notifyEntrepreneur(deliveryId, 'delivery_picked_up')
       if (newStatus === 'completed')   notifyEntrepreneur(deliveryId, 'delivery_completed')
@@ -391,16 +378,6 @@ export default function MyDeliveries() {
         setCodeError(data?.error || 'Código incorrecto. Verifique com o empreendedor.')
         return
       }
-      // Sucesso — checkpoint + notificações
-      try {
-        await supabase.from('delivery_checkpoints').insert({
-          delivery_id: codeModal.deliveryId,
-          status: 'completed',
-          description: 'Entrega concluída — código verificado',
-          created_at: new Date().toISOString(),
-        })
-      } catch { /* silencioso */ }
-
       // Notificar empreendedor e entregador sobre conclusão
       notifyEntrepreneur(codeModal.deliveryId, 'delivery_completed')
       notifyDeliverer(codeModal.deliveryId, 'delivery_completed')
