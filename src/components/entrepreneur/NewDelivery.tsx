@@ -1,6 +1,7 @@
 // src/components/entrepreneur/NewDelivery.tsx
 
 import { useState, useEffect, useCallback } from 'react'
+import { fetchRemoteSettings } from '../../lib/preferences'
 import { useNavigate } from 'react-router-dom'
 import {
   MapPin, Package, DollarSign, Shield,
@@ -69,6 +70,16 @@ export default function NewDelivery() {
 
   // Estado
   const [loading,      setLoading]      = useState(false)
+  // Pré-preenche com as predefinições guardadas em Configurações (se existirem)
+  useEffect(() => {
+    if (!user?.id) return
+    fetchRemoteSettings(user.id).then(r => {
+      if (!r) return
+      if (r.default_origin_address) setOriginAddress(v => v || r.default_origin_address!)
+      if (r.default_item_type) setItemType(v => v || r.default_item_type!)
+    })
+  }, [user?.id])
+
   const [checkingPlan, setCheckingPlan] = useState(true)
   const [subscription, setSubscription] = useState<ActiveSubscription | null>(null)
   const [error,        setError]        = useState<string | null>(null)

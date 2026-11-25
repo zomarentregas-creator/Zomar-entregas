@@ -1,0 +1,73 @@
+/* ZOMAR — acessibilidade e personalização. Controlado por atributos data-* no <html>
+   (ver src/lib/preferences.ts). Sem `filter` no body, para não partir elementos fixos. */
+
+/* Saltar para o conteúdo */
+.zm-skip { position: fixed; left: 8px; top: -64px; z-index: 1000; padding: 10px 16px; border-radius: 10px;
+  background: #fbbf24; color: #111; font-weight: 700; text-decoration: none; transition: top .15s; }
+.zm-skip:focus { top: 8px; }
+
+/* Tamanho do texto (escala rem + classes com px fixos mais comuns) */
+html[data-a11y-text="115"] { font-size: 115%; }
+html[data-a11y-text="130"] { font-size: 130%; }
+html[data-a11y-text="150"] { font-size: 150%; }
+html[data-a11y-text] .text-\[9px\]  { font-size: calc(9px  * var(--zm-scale, 1)); }
+html[data-a11y-text] .text-\[10px\] { font-size: calc(10px * var(--zm-scale, 1)); }
+html[data-a11y-text] .text-\[11px\] { font-size: calc(11px * var(--zm-scale, 1)); }
+html[data-a11y-text] .text-\[12px\] { font-size: calc(12px * var(--zm-scale, 1)); }
+html[data-a11y-text] .text-\[13px\] { font-size: calc(13px * var(--zm-scale, 1)); }
+
+/* Fonte de leitura fácil: letras bem distintas, mais espaço */
+html[data-a11y-font="readable"] body,
+html[data-a11y-font="readable"] button,
+html[data-a11y-font="readable"] input,
+html[data-a11y-font="readable"] select,
+html[data-a11y-font="readable"] textarea {
+  font-family: Verdana, Tahoma, "Segoe UI", system-ui, sans-serif !important;
+  letter-spacing: .02em; word-spacing: .08em;
+}
+html[data-a11y-font="readable"] main { line-height: 1.65; }
+
+/* Foco bem visível (teclado) */
+html[data-a11y-focus="strong"] :focus-visible {
+  outline: 3px solid #fbbf24 !important; outline-offset: 2px !important; border-radius: 6px;
+}
+
+/* Alvos de toque maiores */
+html[data-a11y-targets="large"] button,
+html[data-a11y-targets="large"] [role="button"],
+html[data-a11y-targets="large"] [role="switch"],
+html[data-a11y-targets="large"] select,
+html[data-a11y-targets="large"] input:not([type="checkbox"]):not([type="radio"]) { min-height: 48px; }
+html[data-a11y-targets="large"] button,
+html[data-a11y-targets="large"] [role="button"] { min-width: 44px; }
+
+/* Reduzir movimento */
+html[data-a11y-motion="reduce"] *,
+html[data-a11y-motion="reduce"] *::before,
+html[data-a11y-motion="reduce"] *::after {
+  animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important; scroll-behavior: auto !important;
+}
+
+/* Alto contraste — escuro */
+html[data-a11y-contrast="high"] .zm-dark [class*="text-gray-"],
+html[data-a11y-contrast="high"] .zm-dark [class*="text-slate-"],
+html[data-a11y-contrast="high"] .zm-dark [class*="text-white/"] { color: #f3f4f6 !important; }
+html[data-a11y-contrast="high"] .zm-dark [class*="border-white/"],
+html[data-a11y-contrast="high"] .zm-dark [class*="border-gray-"] { border-color: rgba(255,255,255,.45) !important; }
+html[data-a11y-contrast="high"] .zm-dark [class*="text-emerald-"] { color: #6ee7b7 !important; }
+
+/* Alto contraste — claro */
+html[data-a11y-contrast="high"][data-zm-theme="light"] [class*="text-gray-"],
+html[data-a11y-contrast="high"][data-zm-theme="light"] [class*="text-slate-"] { color: #111827 !important; }
+html[data-a11y-contrast="high"][data-zm-theme="light"] [class*="border-gray-"] { border-color: #4b5563 !important; }
+html[data-a11y-contrast="high"][data-zm-theme="light"] [class*="text-emerald-"] { color: #047857 !important; }
+
+/* Modo compacto (menos espaçamento) */
+html[data-compact="true"] main .p-6 { padding: 1rem; }
+html[data-compact="true"] main .p-5 { padding: .875rem; }
+html[data-compact="true"] main .p-4 { padding: .75rem; }
+html[data-compact="true"] main .gap-6 { gap: .75rem; }
+html[data-compact="true"] main .gap-4 { gap: .625rem; }
+html[data-compact="true"] main .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+html[data-compact="true"] main .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: .625rem; }
