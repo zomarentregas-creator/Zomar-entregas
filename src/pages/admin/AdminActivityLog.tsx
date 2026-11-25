@@ -1,5 +1,7 @@
 // src/pages/admin/AdminActivityLog.tsx
 import React, { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/Admin/Adminlayout'
 import { useTheme } from '../../contexts/ThemeContext'
 import { supabase } from '../../lib/supabase'
@@ -7,7 +9,7 @@ import {
   Search, RefreshCw, ChevronLeft, ChevronRight,
   CheckCircle, AlertCircle, Clock, X, Shield,
   UserCheck, ShieldAlert, Edit2, Package,
-  Activity, ChevronDown, Eye,
+  Activity, ChevronDown, Eye, CreditCard, ArrowRight,
 } from 'lucide-react'
 
 /* ── CSS fix ── */
@@ -48,6 +50,10 @@ const ACTION_CFG: Record<string, {
   delivery_status_changed: { label: 'Entrega actualizada', icon: <Package size={13}/>,   color: d => d ? 'text-emerald-400' : 'text-emerald-600', bg: d => d ? 'bg-emerald-500/10' : 'bg-emerald-50' },
   suspension:              { label: 'Conta suspensa',      icon: <ShieldAlert size={13}/>,color: d => d ? 'text-red-400'    : 'text-red-600',     bg: d => d ? 'bg-red-500/10'     : 'bg-red-50'     },
   login:                   { label: 'Login',               icon: <UserCheck size={13}/>, color: d => d ? 'text-emerald-400' : 'text-emerald-600', bg: d => d ? 'bg-emerald-500/10' : 'bg-emerald-50' },
+  subscription_requested:  { label: 'Pedido de plano',     icon: <CreditCard size={13}/>,color: d => d ? 'text-amber-400'   : 'text-amber-600',   bg: d => d ? 'bg-amber-500/10'   : 'bg-amber-50'   },
+  subscription_activated:  { label: 'Plano activado',      icon: <CheckCircle size={13}/>,color: d => d ? 'text-emerald-400': 'text-emerald-600', bg: d => d ? 'bg-emerald-500/10' : 'bg-emerald-50' },
+  subscription_rejected:   { label: 'Pedido rejeitado',    icon: <X size={13}/>,         color: d => d ? 'text-red-400'     : 'text-red-600',     bg: d => d ? 'bg-red-500/10'     : 'bg-red-50'     },
+  subscription_updated:    { label: 'Plano actualizado',   icon: <Edit2 size={13}/>,     color: d => d ? 'text-blue-400'    : 'text-blue-600',    bg: d => d ? 'bg-blue-500/10'    : 'bg-blue-50'    },
   broadcast_sent:          { label: 'Broadcast enviado',   icon: <Activity size={13}/>,  color: d => d ? 'text-blue-400'    : 'text-blue-600',    bg: d => d ? 'bg-blue-500/10'    : 'bg-blue-50'    },
 }
 
@@ -74,6 +80,7 @@ const fmtRelative = (s: string) => {
 /* ─── Componente ─────────────────────────────────────────────────────────────── */
 export default function AdminActivityLog() {
   const { isDark } = useTheme()
+  const navigate = useNavigate()
 
   const [logs,        setLogs]        = useState<LogEntry[]>([])
   const [total,       setTotal]       = useState(0)
@@ -247,6 +254,8 @@ export default function AdminActivityLog() {
                 <option value="trust_score_changed">Confiança alterada</option>
                 <option value="delivery_status_changed">Entrega actualizada</option>
                 <option value="suspension">Suspensão</option>
+                <option value="subscription_requested">Pedido de plano</option>
+                <option value="subscription_activated">Plano activado</option>
                 <option value="broadcast_sent">Broadcast enviado</option>
                 <option value="login">Login</option>
               </select>
@@ -305,7 +314,9 @@ export default function AdminActivityLog() {
                   {/* Metadata resumida */}
                   {log.metadata && Object.keys(log.metadata).length > 0 && (
                     <p className={`text-xs mt-0.5 truncate ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {log.metadata.old_status && log.metadata.new_status
+                      {log.action === 'subscription_requested'
+                        ? `${log.metadata.plan ?? ''} · ${log.metadata.price ?? ''} MZ · ${log.metadata.ref ?? ''}`
+                        : log.metadata.old_status && log.metadata.new_status
                         ? `${log.metadata.old_status} → ${log.metadata.new_status}`
                         : log.metadata.old_trust !== undefined
                           ? `confiança: ${Number(log.metadata.old_trust).toFixed(1)} → ${Number(log.metadata.new_trust).toFixed(1)}`
@@ -363,8 +374,8 @@ export default function AdminActivityLog() {
         )}
 
         {/* ── Modal: Detalhe do log ── */}
-        {selected && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        {selected && createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className={`w-full max-w-md rounded-2xl border p-6 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-gray-200 shadow-2xl'}`}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
@@ -422,12 +433,20 @@ export default function AdminActivityLog() {
                 </div>
               )}
 
+              {selected.action === 'subscription_requested' && (
+                <button onClick={() => { setSelected(null); navigate('/admin/subscriptions') }}
+                  className="w-full mt-5 py-2.5 rounded-xl text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center gap-2 transition-colors">
+                  Aceitar ou recusar pedido <ArrowRight size={15}/>
+                </button>
+              )}
+
               <button onClick={() => setSelected(null)}
-                className={`w-full mt-5 py-2.5 rounded-xl text-sm font-medium border transition-colors ${isDark ? 'border-white/10 text-gray-300 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                className={`w-full mt-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${isDark ? 'border-white/10 text-gray-300 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                 Fechar
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </AdminLayout>

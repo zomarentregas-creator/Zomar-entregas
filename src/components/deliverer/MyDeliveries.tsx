@@ -276,6 +276,77 @@ export default function MyDeliveries() {
     }
   }
 
+  // ── Botões de acção (tabela em ecrãs grandes, cartões em telemóvel) ────────
+  const renderActions = (delivery: Delivery, full = false) => {
+    const isActioning = actionLoading === delivery.id
+    return (
+      <div className={full ? 'grid grid-cols-2 gap-2' : 'flex gap-1.5 flex-wrap items-center'}>
+
+                            {/* Ver — rota correta dentro do layout do entregador */}
+                            <button
+                              onClick={() => navigate(`/deliverer/delivery/${delivery.id}`)}
+                              className={`inline-flex items-center justify-center gap-1.5 ${full ? 'px-3 py-3 text-sm font-semibold rounded-xl' : 'px-2.5 py-1 text-xs rounded'} border transition-colors ${
+                                dk(
+                                  'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30',
+                                  'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                )
+                              }`}
+                            >
+                              <Eye size={12} />
+                              Ver
+                            </button>
+
+                            {/* Coletar — só quando accepted */}
+                            {delivery.current_status === 'accepted' && (
+                              <button
+                                onClick={() => { setCodeModal({ deliveryId: delivery.id, mode: 'collect' }); setCodeInput(''); setCodeError('') }}
+                                disabled={isActioning}
+                                className={`inline-flex items-center justify-center gap-1.5 ${full ? 'px-3 py-3 text-sm font-semibold rounded-xl' : 'px-2.5 py-1 text-xs rounded'} border transition-colors disabled:opacity-50 ${
+                                  dk(
+                                    'bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30',
+                                    'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                  )
+                                }`}
+                              >
+                                {isActioning ? <Loader2 size={12} className="animate-spin"/> : <Package size={12}/>}
+                                Coletar
+                              </button>
+                            )}
+
+                            {/* Entregar — requer código do empreendedor */}
+                            {delivery.current_status === 'in_progress' && (
+                              <button
+                                onClick={() => { setCodeModal({ deliveryId: delivery.id, mode: 'deliver' }); setCodeInput(''); setCodeError('') }}
+                                disabled={isActioning}
+                                className={`inline-flex items-center justify-center gap-1.5 ${full ? 'px-3 py-3 text-sm font-semibold rounded-xl' : 'px-2.5 py-1 text-xs rounded'} border transition-colors disabled:opacity-50 ${
+                                  dk(
+                                    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30',
+                                    'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  )
+                                }`}
+                              >
+                                {isActioning ? <Loader2 size={12} className="animate-spin"/> : <KeyRound size={12}/>}
+                                Entregar
+                              </button>
+                            )}
+
+                            {/* Reportar problema */}
+                            {(delivery.current_status === 'accepted' || delivery.current_status === 'in_progress') && (
+                              <button
+                                onClick={() => setReportFor(delivery.id)}
+                                disabled={isActioning}
+                                className={`inline-flex items-center justify-center gap-1.5 ${full ? 'px-3 py-3 text-sm font-semibold rounded-xl' : 'px-2.5 py-1 text-xs rounded'} border transition-colors disabled:opacity-50 ${
+                                  dk('bg-red-500/10 text-red-400 border-red-500/25 hover:bg-red-500/20', 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100')
+                                }`}
+                              >
+                                <AlertCircle size={12}/>
+                                Problema
+                              </button>
+                            )}
+                          </div>
+    )
+  }
+
   // ── Filtros ─────────────────────────────────────────────────────────────────
   const filteredDeliveries = deliveries.filter(d => {
     if (statusFilter !== 'all' && d.current_status !== statusFilter) return false
@@ -595,7 +666,39 @@ export default function MyDeliveries() {
           <div className={`rounded-xl border overflow-hidden ${
             dk('bg-white/5 border-white/10', 'bg-white border-gray-200 shadow-sm')
           }`}>
-            <div className={`overflow-x-auto scrollbar-themed ${isDarkMode ? 'scrollbar-dark' : 'scrollbar-light'}`}>
+            {/* Telemóvel: cartões com acções sempre visíveis */}
+            <div className="md:hidden p-3 space-y-3">
+              {filteredDeliveries.map(delivery => {
+                const s = getStatus(delivery.current_status)
+                return (
+                  <div key={delivery.id}
+                    className={`rounded-xl border p-4 ${dk('bg-white/5 border-white/10', 'bg-white border-gray-200')}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className={`font-semibold text-sm ${dk('text-white', 'text-gray-900')}`}>{delivery.item_type}</p>
+                        <p className={`text-xs mt-0.5 ${dk('text-gray-400', 'text-gray-500')}`}>{delivery.entrepreneur_name}</p>
+                      </div>
+                      <div className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded border ${s.color}`}>
+                        {s.icon}{s.label}
+                      </div>
+                    </div>
+                    <div className={`mt-3 space-y-1 text-xs ${dk('text-gray-400', 'text-gray-500')}`}>
+                      <p className="flex gap-1.5"><MapPin size={12} className="mt-0.5 flex-shrink-0"/>De: {delivery.origin_address}</p>
+                      <p className="flex gap-1.5"><MapPin size={12} className="mt-0.5 flex-shrink-0 text-emerald-400"/>Para: {delivery.destination_address}</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 mb-3">
+                      <span className="font-bold text-emerald-400 text-sm">{fmtMZN(calcFee(delivery))}</span>
+                      <span className={`text-xs ${dk('text-gray-500', 'text-gray-400')}`}>
+                        {new Date(delivery.created_at).toLocaleDateString('pt-MZ')}
+                      </span>
+                    </div>
+                    {renderActions(delivery, true)}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className={`hidden md:block overflow-x-auto scrollbar-themed ${isDarkMode ? 'scrollbar-dark' : 'scrollbar-light'}`}>
               <table className="min-w-full">
                 <thead>
                   <tr className={`border-b ${dk('border-white/10', 'border-gray-200')}`}>
@@ -669,70 +772,7 @@ export default function MyDeliveries() {
 
                         {/* Ações */}
                         <td className="px-4 py-3">
-                          <div className="flex gap-1.5 flex-wrap items-center">
-
-                            {/* Ver — rota correta dentro do layout do entregador */}
-                            <button
-                              onClick={() => navigate(`/deliverer/delivery/${delivery.id}`)}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-colors ${
-                                dk(
-                                  'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30',
-                                  'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                )
-                              }`}
-                            >
-                              <Eye size={12} />
-                              Ver
-                            </button>
-
-                            {/* Coletar — só quando accepted */}
-                            {delivery.current_status === 'accepted' && (
-                              <button
-                                onClick={() => { setCodeModal({ deliveryId: delivery.id, mode: 'collect' }); setCodeInput(''); setCodeError('') }}
-                                disabled={isActioning}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-50 ${
-                                  dk(
-                                    'bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30',
-                                    'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                                  )
-                                }`}
-                              >
-                                {isActioning ? <Loader2 size={12} className="animate-spin"/> : <Package size={12}/>}
-                                Coletar
-                              </button>
-                            )}
-
-                            {/* Entregar — requer código do empreendedor */}
-                            {delivery.current_status === 'in_progress' && (
-                              <button
-                                onClick={() => { setCodeModal({ deliveryId: delivery.id, mode: 'deliver' }); setCodeInput(''); setCodeError('') }}
-                                disabled={isActioning}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-50 ${
-                                  dk(
-                                    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30',
-                                    'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                  )
-                                }`}
-                              >
-                                {isActioning ? <Loader2 size={12} className="animate-spin"/> : <KeyRound size={12}/>}
-                                Entregar
-                              </button>
-                            )}
-
-                            {/* Reportar problema */}
-                            {(delivery.current_status === 'accepted' || delivery.current_status === 'in_progress') && (
-                              <button
-                                onClick={() => setReportFor(delivery.id)}
-                                disabled={isActioning}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-50 ${
-                                  dk('bg-red-500/10 text-red-400 border-red-500/25 hover:bg-red-500/20', 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100')
-                                }`}
-                              >
-                                <AlertCircle size={12}/>
-                                Problema
-                              </button>
-                            )}
-                          </div>
+                          {renderActions(delivery)}
                         </td>
                       </tr>
                     )

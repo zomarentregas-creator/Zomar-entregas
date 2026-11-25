@@ -81,9 +81,13 @@ export const PLANS: Plan[] = [
   },
 ]
 
-/** Stripe está configurado se pelo menos um plano tem price_id */
+/**
+ * Pagamento por cartão (Stripe) DESLIGADO por defeito: enquanto não houver domínio
+ * e alojamento próprios, os planos são pagos manualmente (ver src/config/payments.ts).
+ * Para voltar a ligar: VITE_STRIPE_ENABLED=true (e price_id nos planos).
+ */
 export const stripeEnabled = (): boolean =>
-  PLANS.some(p => p.stripe_price_id !== null)
+  import.meta.env.VITE_STRIPE_ENABLED === 'true' && PLANS.some(p => p.stripe_price_id !== null)
 
 /** Mapa rápido: plan_id → plano completo */
 export const PLAN_MAP: Record<string, Plan> = Object.fromEntries(
