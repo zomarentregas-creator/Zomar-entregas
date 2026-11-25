@@ -13,6 +13,7 @@ import {
 import SupportButton from '../shared/SupportButton';
 import '../../styles/zomar-a11y.css'
 import PreferencesSync from '../shared/PreferencesSync'
+import OnboardingGuide, { openGuide } from '../shared/OnboardingGuide';
 import '../../styles/zomar-motion.css';
 import '../../styles/zomar-nav.css'
 import '../../styles/zomar-theme.css'
@@ -330,6 +331,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
             <p className={dk('text-gray-500', 'text-gray-600')}>© {new Date().getFullYear()} ZOMAR • Entregador</p>
             <div className="flex items-center gap-4">
               {[
+                { label: 'Guia rápido', action: openGuide },
                 { label: 'Ajuda',   action: () => navigate('/deliverer/help') },
                 { label: 'Termos',  action: () => navigate('/deliverer/terms') },
               ].map(b => (
@@ -372,6 +374,7 @@ const DelivererLayout: React.FC<DelivererLayoutProps> = ({ children }) => {
         </div>
       </nav>
 
+      <OnboardingGuide role="deliverer" isDarkMode={isDarkMode}/>
       <SupportButton isDarkMode={isDarkMode} raiseOnMobile quickQuestions={['Como aceitar uma entrega?','Como receber os meus ganhos?','Problemas com uma entrega']}/>
     </div>
   );

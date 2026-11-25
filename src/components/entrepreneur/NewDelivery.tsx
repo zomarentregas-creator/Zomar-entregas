@@ -204,8 +204,8 @@ export default function NewDelivery() {
       const { data: delivery, error: dErr } = await supabase
         .from('deliveries')
         .insert(insertPayload)
-        // FIX: delivery_code agora existe no schema com DEFAULT generate_delivery_code()
-        .select('id, delivery_code')
+        // O código de confirmação vive numa tabela privada: obtém-se pela função segura
+        .select('id')
         .single()
 
       if (dErr) throw dErr
@@ -230,7 +230,10 @@ export default function NewDelivery() {
       // Os entregadores são avisados no servidor (trigger notify_new_delivery)
 
       setCreatedId(delivery.id)
-      setDeliveryCode(delivery.delivery_code ?? null)
+      try {
+        const { data: codeRes } = await supabase.rpc('get_delivery_code', { p_delivery_id: delivery.id })
+        setDeliveryCode(codeRes?.success ? (codeRes.code ?? null) : null)
+      } catch { setDeliveryCode(null) }
       setWasScheduled(isScheduled)
 
     } catch (e: any) {

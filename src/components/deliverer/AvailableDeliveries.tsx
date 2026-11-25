@@ -155,17 +155,7 @@ export default function AvailableDeliveries() {
         return
       }
 
-      // Audit log — falha silenciosa, não bloqueia o fluxo
-      try {
-        await supabase.from('activity_logs').insert({
-          user_id:     delivery.entrepreneur_id,
-          actor_id:    user.id,
-          action:      'delivery_status_changed',
-          entity_type: 'delivery',
-          entity_id:   delivery.id,
-          metadata:    { old_status: delivery.current_status, new_status: 'accepted', deliverer_id: user.id },
-        })
-      } catch { /* silencioso */ }
+      // O registo de auditoria é feito no servidor (trigger), não pelo cliente
 
       // ── Notificar empreendedor que a entrega foi aceite ───────────────────
       notifyEntrepreneur(delivery.id, 'delivery_accepted')

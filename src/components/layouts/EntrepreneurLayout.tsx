@@ -13,6 +13,7 @@ import {
 import SupportButton from '../shared/SupportButton';
 import '../../styles/zomar-a11y.css'
 import PreferencesSync from '../shared/PreferencesSync'
+import OnboardingGuide, { openGuide } from '../shared/OnboardingGuide';
 import '../../styles/zomar-motion.css';
 import '../../styles/zomar-nav.css'
 import '../../styles/zomar-theme.css'
@@ -333,6 +334,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
             <p className={dk('text-gray-500', 'text-gray-600')}>© {new Date().getFullYear()} ZOMAR • Empreendedor</p>
             <div className="flex items-center gap-4">
               {[
+                { label: 'Guia rápido', action: openGuide },
                 { label: 'Ajuda',   action: () => navigate('/entrepreneur/help') },
                 { label: 'Termos',  action: () => navigate('/entrepreneur/terms') },
               ].map(b => (
@@ -375,6 +377,7 @@ const EntrepreneurLayout: React.FC<EntrepreneurLayoutProps> = ({ children }) => 
         </div>
       </nav>
 
+      <OnboardingGuide role="entrepreneur" isDarkMode={isDarkMode}/>
       <SupportButton isDarkMode={isDarkMode} raiseOnMobile quickQuestions={['Como criar uma entrega?','Como alterar o meu plano?','Problemas com pagamento']}/>
     </div>
   );
