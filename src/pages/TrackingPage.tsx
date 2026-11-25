@@ -1,5 +1,5 @@
 // Página pública de rastreio: /rastreio/:code — não exige login.
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AlertTriangle, MapPin, Package, RefreshCw, Truck, XCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -14,12 +14,14 @@ export default function TrackingPage() {
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [updated, setUpdated] = useState<string | null>(null)
+  const dataRef = useRef<TrackResult | null>(null)
   const dark = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches
 
   const load = useCallback(async () => {
     const { data: res, error } = await supabase.rpc('track_delivery', { p_code: code })
     if (error) { setFailed(true); setLoading(false); return }
     setFailed(false)
+    dataRef.current = res as TrackResult
     setData(res as TrackResult)
     setUpdated(new Date().toISOString())
     setLoading(false)
@@ -27,7 +29,8 @@ export default function TrackingPage() {
 
   useEffect(() => {
     void load()
-    const id = window.setInterval(() => { if (document.visibilityState === 'visible') void load() }, POLL_MS)
+    // só actualiza automaticamente quando a entrega existe (evita falhas repetidas)
+    const id = window.setInterval(() => { if (document.visibilityState === 'visible' && dataRef.current?.found) void load() }, POLL_MS)
     return () => window.clearInterval(id)
   }, [load])
 
@@ -61,8 +64,8 @@ export default function TrackingPage() {
 
         {!loading && data && !data.found && (
           <div className={cardCls} role="alert">
-            <p className="font-semibold">Entrega não encontrada.</p>
-            <p className={`text-sm mt-1 ${muted}`}>Confirme o link recebido. Se o problema continuar, fale com quem lhe enviou o link.</p>
+            <p className="font-semibold">{data.rate_limited ? 'Demasiadas tentativas.' : 'Entrega não encontrada.'}</p>
+            <p className={`text-sm mt-1 ${muted}`}>{data.rate_limited ? 'Aguarde alguns minutos e tente de novo com o link correcto.' : 'Confirme o link recebido. Se o problema continuar, fale com quem lhe enviou o link.'}</p>
           </div>
         )}
 
