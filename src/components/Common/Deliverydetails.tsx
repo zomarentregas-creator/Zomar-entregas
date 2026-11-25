@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import TrackingTimeline from '../shared/TrackingTimeline'
 import { buildSteps, trackingUrl, trackingShareText } from '../../lib/tracking'
+import ReportProblemModal from '../shared/ReportProblemModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -107,6 +108,7 @@ export default function DeliveryDetails() {
 
   // Modal de acção (entregador)
   const [actionModal,  setActionModal]  = useState<'collect' | 'deliver' | null>(null)
+  const [reportOpen,   setReportOpen]   = useState(false)
   const [codeInput,    setCodeInput]    = useState('')
   const [codeError,    setCodeError]    = useState('')
   const [actionLoading,setActionLoading]= useState(false)
@@ -563,6 +565,12 @@ export default function DeliveryDetails() {
                 <KeyRound size={15}/> Introduzir Código e Concluir
               </button>
             )}
+            {(delivery.current_status === 'accepted' || delivery.current_status === 'in_progress' || delivery.current_status === 'picked_up') && (
+              <button onClick={() => setReportOpen(true)}
+                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border transition-all ${dk('border-red-500/30 text-red-400 hover:bg-red-500/10', 'border-red-200 text-red-700 hover:bg-red-50')}`}>
+                <AlertCircle size={15}/> Reportar problema
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -698,6 +706,10 @@ export default function DeliveryDetails() {
             </div>
           </div>
         </div>
+      )}
+      {reportOpen && (
+        <ReportProblemModal deliveryId={delivery.id} onClose={() => setReportOpen(false)}
+          onReported={() => { setReportOpen(false); setFeedback({ type: 'ok', msg: 'Problema reportado. A equipa foi avisada.' }); load() }} />
       )}
     </div>
   )

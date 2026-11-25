@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { PLANS, PLAN_MAP, formatMZN, stripeEnabled, type Plan } from '../config/plans'
 import { useStripe } from '../hooks/useStripe'
+import { PAYMENT_ACCOUNTS, WHATSAPP_DISPLAY, whatsappLink } from '../config/payments'
 import { stagger } from '../components/Common/MotionKit'
 import '../styles/zomar-nav.css'
 
@@ -20,6 +21,7 @@ interface Subscription {
   status: 'active' | 'trialing' | 'canceled' | 'expired' | 'pending'
   max_deliveries: number; current_usage: number; start_date: string
   end_date: string | null; renewal_date: string | null; payment_method: 'stripe' | 'mobile_money' | null
+  notes?: string | null
 }
 
 type PayMethod = 'card' | 'mobile'
@@ -65,6 +67,7 @@ export default function SubscriptionPage() {
   const [selPlan,   setSelPlan]   = useState<Plan | null>(null)
   const [payMethod, setPayMethod] = useState<PayMethod>('mobile')
   const [errMsg,    setErrMsg]    = useState('')
+  const [reqRef,    setReqRef]    = useState('')
 
   // Retorno Stripe (query params)
   useEffect(() => {
@@ -126,41 +129,41 @@ export default function SubscriptionPage() {
     if (!selPlan || !user?.id) return
     setStep('processing')
     try {
-      if (sub?.status === 'pending') await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', sub.id)
-      const ref = `ZOMAR-${selPlan.id.toUpperCase()}-${user.id.slice(0,6).toUpperCase()}-${Date.now()}`
-      await supabase.from('subscriptions').insert({
-        user_id: user.id, plan_id: selPlan.id, plan_name: selPlan.name, price: selPlan.price,
-        status: 'pending', max_deliveries: selPlan.max_deliveries, current_usage: 0,
-        payment_method: 'mobile_money', start_date: new Date().toISOString(), renewal_date: null, notes: ref,
-      })
-      try { await supabase.from('activity_logs').insert({ user_id: user.id, actor_id: user.id,
-        action: 'subscription_requested', entity_type: 'subscription',
-        metadata: { plan: selPlan.id, price: selPlan.price, method: 'mobile_money', ref } }) } catch {}
+      const { data, error } = await supabase.rpc('request_subscription', { p_plan_id: selPlan.id })
+      if (error) throw error
+      const r = data as { success?: boolean; error?: string; ref?: string } | null
+      if (!r?.success) throw new Error(r?.error || 'Não foi possível registar o pedido.')
+      setReqRef(r.ref || '')
       setStep('success'); load()
-    } catch (e: any) { setErrMsg(e.message || 'Erro ao registar pedido.'); setStep('error') }
+    } catch (e) { setErrMsg(e instanceof Error ? e.message : 'Erro ao registar pedido.'); setStep('error') }
   }
 
+  const proofMessage = (plan: string, price: number, ref: string) =>
+    `Olá ZOMAR! Fiz o pagamento do plano ${plan} (${formatMZN(price)}). Referência: ${ref}. Segue o comprovativo.`
+
+  // Pedido pendente: o cliente pode desistir. Plano activo: o cancelamento é tratado pela equipa.
   const handleCancel = async () => {
-    if (!sub || !window.confirm('Cancelar a assinatura?\n\nO acesso continua até ao fim do período actual.')) return
+    if (!sub) return
+    if (sub.status !== 'pending') {
+      window.open(whatsappLink('Olá ZOMAR! Gostaria de cancelar o meu plano.'), '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (!window.confirm('Cancelar este pedido de plano?')) return
     setActLoad(true)
     try {
-      await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', sub.id)
-      setSub(p => p ? { ...p, status: 'canceled' } : null)
-      setActMsg({ ok: true, text: 'Assinatura cancelada. O acesso continua até ao fim do período.' })
-    } catch (e: any) { setActMsg({ ok: false, text: e.message || 'Erro ao cancelar.' }) }
+      const { error } = await supabase.rpc('cancel_pending_subscription')
+      if (error) throw error
+      await load()
+      setActMsg({ ok: true, text: 'Pedido cancelado.' })
+    } catch (e) { setActMsg({ ok: false, text: e instanceof Error ? e.message : 'Erro ao cancelar.' }) }
     finally { setActLoad(false) }
   }
 
-  const handleReactivate = async () => {
-    if (!sub || !window.confirm('Reactivar a assinatura?')) return
-    setActLoad(true)
-    try {
-      const renewal = new Date(); renewal.setDate(renewal.getDate() + 30)
-      await supabase.from('subscriptions').update({ status: 'active', renewal_date: renewal.toISOString() }).eq('id', sub.id)
-      setSub(p => p ? { ...p, status: 'active', renewal_date: renewal.toISOString() } : null)
-      setActMsg({ ok: true, text: 'Assinatura reactivada!' })
-    } catch (e: any) { setActMsg({ ok: false, text: e.message || 'Erro ao reactivar.' }) }
-    finally { setActLoad(false) }
+  // Renovar = novo pedido do mesmo plano (a equipa confirma o novo pagamento)
+  const handleRenew = () => {
+    const plan = sub ? PLAN_MAP[sub.plan_id.replace(/^plan_/, '')] : null
+    if (!plan) { setStep('plans'); return }
+    setSelPlan(plan); setErrMsg(''); setPayMethod('mobile'); setStep('mobile_instructions')
   }
 
   const handleStripePortal = async () => {
@@ -188,7 +191,7 @@ export default function SubscriptionPage() {
           <h2 className={`text-2xl font-bold ${dk('text-white','text-gray-900')}`}>
             {step==='plans'?'Planos e Subscrição':step==='choose_method'?'Como queres pagar?':step==='mobile_instructions'?'Instruções de pagamento':step==='processing'?'A processar…':step==='success'?'Pedido registado!':'Algo correu mal'}
           </h2>
-          {step==='plans' && <p className={`text-sm mt-0.5 ${dk('text-gray-400','text-gray-500')}`}>7 dias grátis · Cartão ou carteira móvel · Cancela quando quiseres</p>}
+          {step==='plans' && <p className={`text-sm mt-0.5 ${dk('text-gray-400','text-gray-500')}`}>Pagamento por carteira móvel ou transferência · Plano activado pela equipa ZOMAR</p>}
         </div>
       </div>
 
@@ -228,7 +231,7 @@ export default function SubscriptionPage() {
                 <div>
                   <p className={`text-sm font-semibold ${dk('text-orange-300','text-orange-700')}`}>A aguardar confirmação de pagamento</p>
                   <p className={`text-xs mt-0.5 ${dk('text-orange-400','text-orange-600')}`}>
-                    Enviaste o comprovativo por WhatsApp? A equipa activa em até 2 horas. Não enviaste? Envia para <strong>+258 84 XXX XXXX</strong>.
+                    Já pagaste? Envia o comprovativo por WhatsApp para <a className="underline font-semibold" href={whatsappLink(proofMessage(sub!.plan_name, sub!.price, sub!.notes ?? ''))} target="_blank" rel="noopener noreferrer">{WHATSAPP_DISPLAY}</a>{sub?.notes ? <> indicando a referência <strong>{sub.notes}</strong></> : null}. A equipa activa o plano depois de confirmar o pagamento.
                   </p>
                 </div>
               </div>
@@ -268,10 +271,16 @@ export default function SubscriptionPage() {
                   {stripe.loading?<Loader2 size={13} className="animate-spin"/>:<ExternalLink size={13}/>} Gerir cartão
                 </button>
               )}
-              {isCanceled
-                ? <button onClick={handleReactivate} disabled={actLoad} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${dk('border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20','border-blue-200 bg-blue-50 text-blue-700')}`}>{actLoad?<Loader2 size={13} className="animate-spin"/>:<RefreshCw size={13}/>} Reactivar</button>
-                : isActive && <button onClick={handleCancel} disabled={actLoad} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border ${dk('border-red-500/20 bg-red-500/8 text-red-400 hover:bg-red-500/15','border-red-200 bg-red-50 text-red-600')}`}>Cancelar plano</button>
-              }
+              {(isCanceled || isActive) && (
+                <button onClick={handleRenew} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${dk('border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20','border-blue-200 bg-blue-50 text-blue-700')}`}>
+                  <RefreshCw size={13}/> Renovar plano
+                </button>
+              )}
+              {(isActive || isPending) && (
+                <button onClick={handleCancel} disabled={actLoad} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border ${dk('border-red-500/20 bg-red-500/8 text-red-400 hover:bg-red-500/15','border-red-200 bg-red-50 text-red-600')}`}>
+                  {actLoad ? <Loader2 size={13} className="animate-spin"/> : null}{isPending ? 'Cancelar pedido' : 'Pedir cancelamento'}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -280,7 +289,7 @@ export default function SubscriptionPage() {
           <div className={`rounded-2xl border p-6 text-center ${dk('bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border-emerald-500/20','bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200')}`}>
             <Zap className="text-emerald-400 mx-auto mb-2" size={26}/>
             <h3 className={`text-xl font-bold mb-1 ${dk('text-white','text-gray-900')}`}>✨ 7 Dias Grátis!</h3>
-            <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>Cartão ou M-Pesa/e-Mola/M-Kesh · Cancela quando quiseres</p>
+            <p className={`text-sm ${dk('text-gray-400','text-gray-500')}`}>Paga por carteira móvel ou transferência e envia o comprovativo por WhatsApp</p>
           </div>
         )}
 
@@ -300,7 +309,6 @@ export default function SubscriptionPage() {
                     <span className={`text-2xl font-black ${c.text}`}>{formatMZN(plan.price)}</span>
                     <span className={`text-xs ${dk('text-gray-500','text-gray-400')}`}>/mês</span>
                   </div>
-                  {!sub && <p className={`text-[11px] mb-3 ${dk('text-emerald-400','text-emerald-600')}`}>✨ 7 dias grátis</p>}
                   <div className={`flex items-center gap-1.5 mb-3 text-[10px] ${dk('text-gray-600','text-gray-400')}`}>
                     <Smartphone size={10}/> M-Pesa · e-Mola · M-Kesh
                     {plan.stripe_price_id && <><span className="mx-1">·</span><CreditCard size={10}/> Cartão</>}
@@ -365,7 +373,7 @@ export default function SubscriptionPage() {
               </div>
             </button>
           </div>
-          <p className={`text-center text-xs ${dk('text-gray-600','text-gray-400')}`}>Ambos os métodos incluem 7 dias grátis</p>
+          <p className={`text-center text-xs ${dk('text-gray-600','text-gray-400')}`}></p>
         </div>
       )}
 
@@ -379,35 +387,41 @@ export default function SubscriptionPage() {
           <div className={`${card} p-5`}>
             <p className={`text-xs font-bold uppercase tracking-wider mb-4 ${dk('text-gray-400','text-gray-500')}`}>Como activar o teu plano</p>
             {[
-              { n:'1', title:'Faz a transferência', desc:`Envia ${formatMZN(selPlan.price)} via M-Pesa, e-Mola ou M-Kesh para o número ZOMAR.` },
-              { n:'2', title:'Guarda o comprovativo', desc:'Faz screenshot ou anota o código da transação gerado após a transferência.' },
-              { n:'3', title:'Envia pelo WhatsApp', desc:'Manda o comprovativo para +258 84 XXX XXXX com o teu nome e email da conta ZOMAR.' },
-              { n:'4', title:'Activamos em até 2h', desc:'A equipa confirma e activa o plano. Recebes uma notificação no app.' },
+              { n:'1', title:'Faz o pagamento', desc: PAYMENT_ACCOUNTS.length ? `Envia ${formatMZN(selPlan.price)} para uma das contas ZOMAR abaixo.` : `Pede-nos os dados de pagamento pelo WhatsApp e envia ${formatMZN(selPlan.price)}.` },
+              { n:'2', title:'Guarda o comprovativo', desc:'Faz screenshot ou anota o código da transacção gerado após o pagamento.' },
+              { n:'3', title:'Regista o pedido aqui', desc:'Geramos uma referência única para o teu pedido. Envia o comprovativo no WhatsApp indicando essa referência.' },
+              { n:'4', title:'A equipa activa o plano', desc:'Depois de confirmar o pagamento, activamos o plano e recebes uma notificação na app.' },
             ].map(({n,title,desc})=>(
               <div key={n} className="flex items-start gap-3 mb-4">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${dk('bg-emerald-500/20 text-emerald-400','bg-emerald-100 text-emerald-700')}`}>{n}</div>
                 <div><p className={`text-sm font-medium ${dk('text-white','text-gray-900')}`}>{title}</p><p className={`text-xs mt-0.5 ${dk('text-gray-400','text-gray-500')}`}>{desc}</p></div>
               </div>
             ))}
-            <div className={`rounded-xl p-4 mb-4 ${dk('bg-emerald-500/8 border border-emerald-500/15','bg-emerald-50 border border-emerald-200')}`}>
-              <p className={`text-xs font-bold mb-3 ${dk('text-emerald-400','text-emerald-700')}`}>Números para transferência</p>
-              <div className="space-y-2">
-                {[{label:'M-Pesa (Vodacom 84/85)',num:'+258 84 XXX XXXX'},{label:'e-Mola (Movitel 86/87)',num:'+258 86 XXX XXXX'},{label:'M-Kesh (BIM 83)',num:'+258 83 XXX XXXX'}].map(({label,num})=>(
-                  <div key={label} className="flex justify-between items-center">
-                    <span className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>{label}</span>
-                    <span className={`text-sm font-mono font-medium ${dk('text-white','text-gray-900')}`}>{num}</span>
-                  </div>
-                ))}
+            {PAYMENT_ACCOUNTS.length > 0 && (
+              <div className={`rounded-xl p-4 mb-4 ${dk('bg-emerald-500/8 border border-emerald-500/15','bg-emerald-50 border border-emerald-200')}`}>
+                <p className={`text-xs font-bold mb-3 ${dk('text-emerald-400','text-emerald-700')}`}>Contas para pagamento</p>
+                <div className="space-y-2">
+                  {PAYMENT_ACCOUNTS.map(({label,value})=>(
+                    <div key={label} className="flex justify-between items-center">
+                      <span className={`text-xs ${dk('text-gray-400','text-gray-600')}`}>{label}</span>
+                      <span className={`text-sm font-mono font-medium ${dk('text-white','text-gray-900')}`}>{value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+            <a href={whatsappLink(`Olá ZOMAR! Quero subscrever o plano ${selPlan.name} (${formatMZN(selPlan.price)}). Podem enviar-me os dados de pagamento?`)} target="_blank" rel="noopener noreferrer"
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border mb-4 ${dk('border-white/10 text-gray-200 hover:bg-white/5','border-gray-200 text-gray-700 hover:bg-gray-50')}`}>
+              Falar com a ZOMAR no WhatsApp ({WHATSAPP_DISPLAY})
+            </a>
             <div className={`flex items-start gap-2 p-3 rounded-xl text-xs mb-5 ${dk('bg-blue-500/8 border border-blue-500/15 text-blue-300','bg-blue-50 border border-blue-200 text-blue-700')}`}>
               <Info size={12} className="flex-shrink-0 mt-0.5"/>
-              Ao confirmar, registamos o teu pedido. O plano fica activo após verificação manual pela equipa ZOMAR.
+              Ao registar, criamos o teu pedido. O plano fica activo só depois de a equipa ZOMAR confirmar o pagamento.
             </div>
             <button onClick={handleMobileRequest} className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all ${C[selPlan.color].btn}`}>
-              <CheckCircle size={15}/> Já paguei — confirmar pedido
+              <CheckCircle size={15}/> Já paguei — registar pedido
             </button>
-            <p className={`text-center text-xs mt-2 ${dk('text-gray-600','text-gray-400')}`}>Activação em até 2 horas · Suporte: zomarentregas@gmail.com</p>
+            <p className={`text-center text-xs mt-2 ${dk('text-gray-600','text-gray-400')}`}>Suporte: zomarentregas@gmail.com</p>
           </div>
         </div>
       )}
@@ -427,7 +441,12 @@ export default function SubscriptionPage() {
           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${dk('bg-emerald-500/15','bg-emerald-50')}`}><CheckCircle size={28} className="text-emerald-400"/></div>
           {payMethod==='card'
             ? <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Plano activado!</h3><p className={`text-sm mb-6 ${dk('text-gray-400','text-gray-500')}`}>O plano <strong>{selPlan.name}</strong> foi activado automaticamente. Já podes criar entregas.</p></>
-            : <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Pedido registado!</h3><p className={`text-sm mb-3 ${dk('text-gray-400','text-gray-500')}`}>O pedido do plano <strong>{selPlan.name}</strong> foi registado.</p><div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs mb-6 ${dk('bg-orange-500/10 border border-orange-500/15 text-orange-300','bg-orange-50 border border-orange-200 text-orange-700')}`}><Clock size={11}/> A equipa activa em até 2 horas após confirmar o pagamento</div></>
+            : <><h3 className={`text-xl font-bold mb-2 ${dk('text-white','text-gray-900')}`}>Pedido registado!</h3>
+                <p className={`text-sm mb-3 ${dk('text-gray-400','text-gray-500')}`}>Falta só enviar o comprovativo de pagamento do plano <strong>{selPlan.name}</strong>.</p>
+                {reqRef && <p className={`text-xs mb-4 font-mono ${dk('text-gray-300','text-gray-700')}`}>Referência: <strong>{reqRef}</strong></p>}
+                <a href={whatsappLink(proofMessage(selPlan.name, selPlan.price, reqRef))} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-green-500 hover:bg-green-400 text-black mb-4">Enviar comprovativo no WhatsApp</a>
+                <div className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs mb-6 ${dk('bg-orange-500/10 border border-orange-500/15 text-orange-300','bg-orange-50 border border-orange-200 text-orange-700')}`}><Clock size={11}/> O plano é activado depois de a equipa confirmar o pagamento</div></>
           }
           <div className="flex gap-3 justify-center">
             <button onClick={()=>setStep('plans')} className={`px-5 py-2.5 rounded-xl text-sm font-medium border ${dk('border-white/10 text-gray-300 hover:bg-white/5','border-gray-200 text-gray-600 hover:bg-gray-50')}`}>Ver planos</button>
