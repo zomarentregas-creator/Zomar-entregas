@@ -3,6 +3,7 @@ export interface TrackCheckpoint { status: string; description: string; at: stri
 
 export interface TrackResult {
   found: boolean
+  rate_limited?: boolean
   status?: string
   item_type?: string
   origin_area?: string
